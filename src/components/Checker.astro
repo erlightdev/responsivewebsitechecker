@@ -88,6 +88,25 @@ const groups = [
       <span class="hidden md:inline">Add Screen</span>
     </button>
 
+    <!-- Workspaces -->
+    <div class="relative shrink-0">
+      <button type="button" id="workspace-btn" class="tip flex h-9 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:px-3" aria-haspopup="menu" aria-expanded="false" aria-label="Workspaces" data-tip="Workspaces">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4.5-9 4.5-9-4.5L12 3z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg>
+        <span class="hidden md:inline">Workspaces</span>
+      </button>
+
+      <div id="workspace-menu" class="absolute left-0 top-full z-50 mt-2 hidden w-64 origin-top-left rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md" role="menu" aria-labelledby="workspace-btn">
+        <button type="button" id="ws-save" role="menuitem" class="menu-item flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-medium text-primary outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+          Save current workspace…
+        </button>
+        <div class="-mx-1 my-1 h-px bg-border"></div>
+        <p class="px-2 pb-1 pt-0.5 text-xs font-medium text-muted-foreground">Saved workspaces</p>
+        <ul id="ws-list" class="max-h-64 overflow-auto"></ul>
+        <p id="ws-empty" class="px-2 py-2 text-xs text-muted-foreground">No saved workspaces yet.</p>
+      </div>
+    </div>
+
     <!-- Layout toggle -->
     <div class="hidden shrink-0 items-center rounded-md border border-border bg-card p-0.5 sm:flex" role="group" aria-label="Canvas layout">
       <button type="button" data-layout="row" class="tip layout-btn grid size-8 place-items-center rounded-[5px] text-muted-foreground data-[on=true]:bg-muted data-[on=true]:text-foreground hover:text-foreground" data-tip="Horizontal strip" aria-label="Horizontal layout">
@@ -378,6 +397,29 @@ const groups = [
     </div>
   </div>
 
+  <!-- ===== Save workspace modal ===== -->
+  <div id="workspace-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="workspace-modal-title">
+    <div id="workspace-modal-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background p-6 shadow-xl">
+      <button type="button" id="workspace-modal-close" class="absolute right-4 top-4 grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Close">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 id="workspace-modal-title" class="text-lg font-semibold tracking-tight">Save workspace</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Save the current URL, devices, layout, zoom and order under a name.</p>
+      <form id="workspace-form" class="mt-5 space-y-4">
+        <div class="space-y-1.5">
+          <label for="workspace-name" class="text-sm font-medium">Name</label>
+          <input id="workspace-name" type="text" placeholder="e.g. Marketing site — mobile" autocomplete="off" spellcheck="false" class="h-9 w-full rounded-md border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+        </div>
+        <p id="workspace-error" class="hidden text-xs font-medium text-destructive">Enter a name for the workspace.</p>
+        <div class="mt-2 flex justify-end gap-2">
+          <button type="button" id="workspace-cancel" class="h-9 rounded-md border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted">Cancel</button>
+          <button type="submit" class="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03]">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ===== Keyboard shortcuts modal ===== -->
   <div id="shortcuts-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
     <div id="shortcuts-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
@@ -431,24 +473,31 @@ const groups = [
   const backdrop = $('sidebar-backdrop');
 
   // ---------- persistence ----------
+  type VPState = { url?: string; layout: Layout; zoom: number | 'fit'; framesOn?: boolean; devices: Device[]; customScreens?: Device[] };
+
+  // A snapshot of everything that makes up the current arrangement.
+  function snapshot(): VPState {
+    return {
+      url: currentUrl,
+      layout,
+      zoom,
+      framesOn,
+      devices: [...active.values()],
+      customScreens: [...customScreens.values()],
+    };
+  }
+
   const store = {
     save() {
       try {
-        localStorage.setItem('vp-state', JSON.stringify({
-          url: currentUrl,
-          layout,
-          zoom,
-          framesOn,
-          devices: [...active.values()],
-          customScreens: [...customScreens.values()],
-        }));
+        localStorage.setItem('vp-state', JSON.stringify(snapshot()));
       } catch { /* private mode etc. */ }
     },
     load() {
       try {
         const raw = localStorage.getItem('vp-state');
         if (!raw) return null;
-        return JSON.parse(raw) as { url?: string; layout: Layout; zoom: number | 'fit'; framesOn?: boolean; devices: Device[]; customScreens?: Device[] };
+        return JSON.parse(raw) as VPState;
       } catch {
         return null;
       }
@@ -1046,6 +1095,7 @@ const groups = [
   const menus = [
     { btn: $('account-btn'), menu: accountMenu },
     { btn: $('theme-btn'), menu: $('theme-menu') },
+    { btn: $('workspace-btn'), menu: $('workspace-menu') },
   ];
   const isOpen = (m: HTMLElement) => m.style.display === 'block';
   function setMenu(menu: HTMLElement, btn: HTMLElement, open: boolean) {
@@ -1115,6 +1165,127 @@ const groups = [
     })
   );
   applyColor();
+
+  // ---------- workspaces ----------
+  type Workspace = { id: string; name: string; state: VPState };
+  const WS_KEY = 'vp-workspaces';
+  const ACTIVE_WS_KEY = 'vp-active-ws';
+  const wsList = $('ws-list');
+  const wsEmpty = $('ws-empty');
+
+  const loadWorkspaces = (): Workspace[] => {
+    try { return JSON.parse(localStorage.getItem(WS_KEY) || '[]'); } catch { return []; }
+  };
+  const saveWorkspaces = (list: Workspace[]) => {
+    try { localStorage.setItem(WS_KEY, JSON.stringify(list)); } catch { /* private mode */ }
+  };
+  const activeWsId = () => localStorage.getItem(ACTIVE_WS_KEY) || '';
+
+  // Apply a saved arrangement at runtime (no page reload).
+  function applyState(s: VPState) {
+    currentUrl = s.url || '';
+    input.value = currentUrl;
+    clearBtn.style.display = currentUrl ? 'block' : 'none';
+    layout = s.layout === 'grid' ? 'grid' : 'row';
+    zoom = s.zoom === 'fit' || typeof s.zoom === 'number' ? s.zoom : 'fit';
+    framesOn = s.framesOn !== false;
+
+    active.clear();
+    (s.devices || []).forEach((d) => active.set(d.id, d));
+
+    // rebuild custom screens + their sidebar rows
+    customScreens.clear();
+    customList.innerHTML = '';
+    (s.customScreens || []).forEach((d) => { customScreens.set(d.id, d); trackCustomCount(d.id); insertCustomRow(d); });
+    syncCustomGroup();
+
+    document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) => {
+      row.dataset.on = String(active.has(row.dataset.id!));
+    });
+
+    applyLayout();
+    syncFrameToggle();
+    zoomLabel.textContent = zoom === 'fit' ? 'Fit' : `${Math.round((zoom as number) * 100)}%`;
+    updateCount();
+    if (currentUrl) {
+      renderAll();
+    } else {
+      frames.innerHTML = '';
+      emptyState.style.display = 'flex';
+    }
+    store.save();
+  }
+
+  function renderWorkspaces() {
+    const list = loadWorkspaces();
+    const activeId = activeWsId();
+    wsList.innerHTML = '';
+    wsEmpty.style.display = list.length ? 'none' : 'block';
+    list.forEach((ws) => {
+      const li = document.createElement('li');
+      const isActive = ws.id === activeId;
+      li.innerHTML = `
+        <div class="group flex items-center gap-1 rounded-sm px-1 hover:bg-accent">
+          <button type="button" class="ws-load flex min-w-0 flex-1 items-center gap-2 py-1.5 pl-1 text-left text-sm outline-none" data-id="${ws.id}">
+            <svg class="size-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4.5-9 4.5-9-4.5L12 3z"/><path d="m3 12 9 4.5 9-4.5"/></svg>
+            <span class="min-w-0 flex-1 truncate ${isActive ? 'font-medium' : ''}">${escapeHtml(ws.name)}</span>
+            ${isActive ? '<span class="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-primary">Active</span>' : ''}
+          </button>
+          <button type="button" class="ws-del grid size-6 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100" data-id="${ws.id}" aria-label="Delete ${escapeHtml(ws.name)}" title="Delete workspace">
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+          </button>
+        </div>`;
+      li.querySelector<HTMLButtonElement>('.ws-load')!.addEventListener('click', () => {
+        const found = loadWorkspaces().find((w) => w.id === ws.id);
+        if (!found) return;
+        applyState(found.state);
+        localStorage.setItem(ACTIVE_WS_KEY, ws.id);
+        renderWorkspaces();
+        closeAllMenus();
+      });
+      li.querySelector<HTMLButtonElement>('.ws-del')!.addEventListener('click', (e) => {
+        e.stopPropagation();
+        saveWorkspaces(loadWorkspaces().filter((w) => w.id !== ws.id));
+        if (activeWsId() === ws.id) localStorage.removeItem(ACTIVE_WS_KEY);
+        renderWorkspaces();
+      });
+      wsList.appendChild(li);
+    });
+  }
+
+  // Save modal
+  const wsModal = $('workspace-modal');
+  const wsNameEl = $<HTMLInputElement>('workspace-name');
+  const wsErr = $('workspace-error');
+  function openWsModal() {
+    wsNameEl.value = '';
+    wsErr.style.display = 'none';
+    wsModal.style.display = 'flex';
+    setTimeout(() => wsNameEl.focus(), 0);
+  }
+  const closeWsModal = () => { wsModal.style.display = 'none'; };
+
+  $('ws-save').addEventListener('click', () => { closeAllMenus(); openWsModal(); });
+  $('workspace-cancel').addEventListener('click', closeWsModal);
+  $('workspace-modal-close').addEventListener('click', closeWsModal);
+  $('workspace-modal-overlay').addEventListener('click', closeWsModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && wsModal.style.display === 'flex') closeWsModal();
+  });
+  ($('workspace-form') as unknown as HTMLFormElement).addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = wsNameEl.value.trim();
+    if (!name) { wsErr.style.display = 'block'; return; }
+    const list = loadWorkspaces();
+    const id = `ws-${Date.now()}`;
+    list.push({ id, name, state: snapshot() });
+    saveWorkspaces(list);
+    localStorage.setItem(ACTIVE_WS_KEY, id);
+    renderWorkspaces();
+    closeWsModal();
+  });
+
+  renderWorkspaces();
 
   // ---------- keyboard shortcuts modal ----------
   $('shortcuts-item').addEventListener('click', () => {
