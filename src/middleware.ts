@@ -96,6 +96,20 @@ const authGate = defineMiddleware(async (context, next) => {
     return next();
   }
 
+  // The checker is open to guests (free 3-screen preview). Signed-in users still
+  // get the ban + per-resource checks; the screen cap itself is applied in the UI.
+  if (path === '/checker' || path.startsWith('/checker/')) {
+    if (user?.banned) return context.redirect('/login?error=banned');
+    if (user && user.role !== 'superadmin') {
+      const flag = await prisma.resourceFlag.findUnique({
+        where: { userId_resource: { userId: user.id, resource: 'checker' } },
+        select: { allowed: true },
+      });
+      if (flag && !flag.allowed) return context.redirect('/account?error=restricted');
+    }
+    return next();
+  }
+
   // Gated from here on.
   if (!user) {
     return context.redirect(`/login?next=${encodeURIComponent(path)}`);
@@ -109,6 +123,13 @@ const authGate = defineMiddleware(async (context, next) => {
   if (path.startsWith('/admin')) {
     if (user.role !== 'superadmin') return new Response('Not found', { status: 404 });
     return next();
+  }
+
+  // Pro-only features (Social preview + Captures). Superadmin has full access;
+  // later this can also include paid plans. Everyone else is bounced back.
+  const PRO_PREFIXES = ['/social', '/captures'];
+  if (user.role !== 'superadmin' && PRO_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))) {
+    return context.redirect('/checker?error=pro');
   }
 
   // Per-resource restriction (superadmin bypasses all flags).

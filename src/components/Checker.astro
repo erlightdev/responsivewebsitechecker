@@ -41,9 +41,18 @@ const user = Astro.locals.user;
 const displayName = user?.name || user?.email?.split('@')[0] || 'Account';
 const email = user?.email ?? '';
 const initial = (displayName.trim()[0] || 'U').toUpperCase();
+
+// Active-screen limit: guests 3, signed-in free tier 6, superadmin unlimited.
+const isSuper = user?.role === 'superadmin';
+const maxScreens = isSuper ? 0 /* 0 = unlimited */ : user ? 6 : 3;
+const screenTier = isSuper ? 'pro' : user ? 'free' : 'guest';
+
+// Social preview + Capture are Pro features. Superadmin has full access; later
+// this can also include paid plans. Everyone else sees them locked.
+const canUsePro = isSuper;
 ---
 
-<div class="flex h-dvh flex-col overflow-hidden">
+<div class="flex h-dvh flex-col overflow-hidden" data-max-screens={String(maxScreens)} data-screen-tier={screenTier} data-can-pro={String(canUsePro)}>
   <!-- ===== Toolbar ===== -->
   <header class="z-40 flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur">
     <!-- Sidebar toggle (mobile) -->
@@ -129,17 +138,19 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
       </div>
     </div>
 
-    <!-- Social preview -->
-    <a href="/social" class="tip flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:px-3" aria-label="Social preview" data-tip="Social preview">
+    <!-- Social preview (Pro) -->
+    <a href="/social" id="social-btn" class="tip flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:px-3" aria-label="Social preview" data-tip={canUsePro ? 'Social preview' : 'Social preview — Pro'}>
       <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>
       <span class="hidden md:inline">Social</span>
+      {!canUsePro && <svg class="size-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
     </a>
 
-    <!-- Capture -->
+    <!-- Capture (Pro) -->
     <div class="relative shrink-0">
-      <button type="button" id="capture-btn" class="tip flex h-9 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:px-3" aria-haspopup="menu" aria-expanded="false" aria-label="Capture" data-tip="Screenshot & record">
+      <button type="button" id="capture-btn" class="tip flex h-9 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:px-3" aria-haspopup="menu" aria-expanded="false" aria-label="Capture" data-tip={canUsePro ? 'Screenshot & record' : 'Capture — Pro'}>
         <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
         <span class="hidden md:inline">Capture</span>
+        {!canUsePro && <svg class="size-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
       </button>
 
       <div id="capture-menu" class="absolute left-0 top-full z-50 mt-2 hidden w-60 origin-top-left rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md" role="menu" aria-labelledby="capture-btn">
@@ -252,8 +263,16 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
       </div>
     </div>
 
+    <!-- Guest CTA -->
+    {!user && (
+      <div class="flex shrink-0 items-center gap-2">
+        <a href="/login" class="hidden h-9 items-center rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline-flex">Log in</a>
+        <a href="/signup" class="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03]">Sign up free</a>
+      </div>
+    )}
+
     <!-- Account menu -->
-    <div class="relative shrink-0">
+    <div class:list={['relative shrink-0', !user && 'hidden']}>
       <button
         type="button"
         id="account-btn"
@@ -556,6 +575,48 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
   const sidebar = $('sidebar');
   const backdrop = $('sidebar-backdrop');
 
+  // ---------- active-screen limit (guest 3 / free 6 / pro unlimited) ----------
+  const root = document.querySelector<HTMLElement>('[data-max-screens]');
+  const MAX_SCREENS = Number(root?.dataset.maxScreens) || Infinity; // 0/NaN → unlimited
+  const SCREEN_TIER = root?.dataset.screenTier || 'guest';
+
+  function limitMessage() {
+    if (SCREEN_TIER === 'guest')
+      return { msg: `Free preview is limited to ${MAX_SCREENS} screens`, desc: 'Sign up free to use up to 6.' };
+    return { msg: `Your plan is limited to ${MAX_SCREENS} screens`, desc: 'Upgrade to Pro for unlimited screens.' };
+  }
+  // Returns true if another screen may be added; otherwise warns and returns false.
+  function canAddScreen(): boolean {
+    if (active.size < MAX_SCREENS) return true;
+    const { msg, desc } = limitMessage();
+    toast.warning(msg, { description: desc, log: false });
+    return false;
+  }
+
+  // ---------- Pro gating (Social preview + Capture) ----------
+  const CAN_PRO = root?.dataset.canPro === 'true';
+  function proToast(feature: string) {
+    toast.warning(`${feature} is a Pro feature`, {
+      description: SCREEN_TIER === 'guest' ? 'Sign up and upgrade to Pro to unlock.' : 'Upgrade to Pro to unlock.',
+      log: false,
+    });
+  }
+
+  // Saved-workspace limit: guests can't save, free tier saves 2, pro unlimited.
+  const MAX_WORKSPACES = SCREEN_TIER === 'pro' ? Infinity : SCREEN_TIER === 'free' ? 2 : 0;
+  // Returns true if a new workspace may be saved; otherwise warns and returns false.
+  function canSaveWorkspace(currentCount: number): boolean {
+    if (MAX_WORKSPACES === 0) {
+      toast.warning('Saving workspaces needs an account', { description: 'Sign up free to save up to 2 workspaces.', log: false });
+      return false;
+    }
+    if (currentCount >= MAX_WORKSPACES) {
+      toast.warning(`Free plan saves up to ${MAX_WORKSPACES} workspaces`, { description: 'Upgrade to Pro for unlimited workspaces.', log: false });
+      return false;
+    }
+    return true;
+  }
+
   // ---------- persistence ----------
   type VPState = { url?: string; layout: Layout; zoom: number | 'fit'; framesOn?: boolean; devices: Device[]; customScreens?: Device[] };
 
@@ -618,6 +679,11 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
         rotated: false,
       });
     });
+  }
+  // Enforce the active-screen cap on whatever we restored (saved state may carry
+  // more than this tier allows — e.g. a signed-out browser with a prior session).
+  if (active.size > MAX_SCREENS) {
+    [...active.keys()].slice(MAX_SCREENS).forEach((id) => active.delete(id));
   }
   // sync built-in sidebar checkmarks with state (custom rows are built later)
   document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) => {
@@ -1001,6 +1067,7 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
     if (active.has(id)) {
       removeDevice(id);
     } else {
+      if (!canAddScreen()) return;
       addDevice({
         id,
         name: row.dataset.name!,
@@ -1070,6 +1137,7 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
   }
 
   function addCustomScreen(name: string, w: number, h: number) {
+    if (!canAddScreen()) return;
     customCount += 1;
     const d: Device = {
       id: `custom-${customCount}`,
@@ -1266,6 +1334,18 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
     renderAll();
   }
 
+  // Block the Pro features for non-pro users (capture phase runs before the
+  // navbar dropdown / link handlers, so the menu never opens & nav is cancelled).
+  if (!CAN_PRO) {
+    $('social-btn').addEventListener('click', (e) => { e.preventDefault(); proToast('Social preview'); }, true);
+    $('capture-btn').addEventListener('click', (e) => { e.preventDefault(); e.stopImmediatePropagation(); proToast('Capture'); }, true);
+  }
+
+  // ?error=pro → a gated Pro route bounced the user back here
+  if (new URLSearchParams(location.search).get('error') === 'pro') {
+    toast.warning('That area is Pro-only', { description: 'Upgrade to Pro to unlock Social preview and Captures.', log: false });
+  }
+
   // ---------- navbar dropdowns (account + theme) ----------
   const accountMenu = $('account-menu');
   const menus = [
@@ -1369,6 +1449,9 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
 
     active.clear();
     (s.devices || []).forEach((d) => active.set(d.id, d));
+    if (active.size > MAX_SCREENS) {
+      [...active.keys()].slice(MAX_SCREENS).forEach((id) => active.delete(id));
+    }
 
     // rebuild custom screens + their sidebar rows
     customScreens.clear();
@@ -1444,7 +1527,11 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
   }
   const closeWsModal = () => { wsModal.style.display = 'none'; };
 
-  $('ws-save').addEventListener('click', () => { closeAllMenus(); openWsModal(); });
+  $('ws-save').addEventListener('click', () => {
+    closeAllMenus();
+    if (!canSaveWorkspace(loadWorkspaces().length)) return;
+    openWsModal();
+  });
   $('workspace-cancel').addEventListener('click', closeWsModal);
   $('workspace-modal-close').addEventListener('click', closeWsModal);
   $('workspace-modal-overlay').addEventListener('click', closeWsModal);
@@ -1456,6 +1543,7 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
     const name = wsNameEl.value.trim();
     if (!name) { wsErr.style.display = 'block'; return; }
     const list = loadWorkspaces();
+    if (!canSaveWorkspace(list.length)) { closeWsModal(); return; }
     const id = `ws-${Date.now()}`;
     list.push({ id, name, state: snapshot() });
     saveWorkspaces(list);
@@ -1515,13 +1603,23 @@ const initial = (displayName.trim()[0] || 'U').toUpperCase();
       );
       if (!valid.length) throw new Error('no valid workspaces');
       const list = loadWorkspaces();
-      valid.forEach((w: Workspace, i: number) =>
+      const room = MAX_WORKSPACES - list.length;
+      if (room <= 0) {
+        toast.warning(
+          MAX_WORKSPACES === 0 ? 'Saving workspaces needs an account' : `Free plan saves up to ${MAX_WORKSPACES} workspaces`,
+          { description: MAX_WORKSPACES === 0 ? 'Sign up free to import workspaces.' : 'Upgrade to Pro for unlimited workspaces.', log: false }
+        );
+        return;
+      }
+      const toAdd = valid.slice(0, room);
+      toAdd.forEach((w: Workspace, i: number) =>
         list.push({ id: `ws-${Date.now()}-${i}`, name: w.name, state: w.state })
       );
       saveWorkspaces(list);
       renderWorkspaces();
-      const msg = `Imported ${valid.length} workspace${valid.length > 1 ? 's' : ''}.`;
-      showWsStatus(msg, false);
+      const skipped = valid.length - toAdd.length;
+      const msg = `Imported ${toAdd.length} workspace${toAdd.length > 1 ? 's' : ''}${skipped ? ` · ${skipped} skipped (limit reached)` : ''}.`;
+      showWsStatus(msg, skipped > 0);
       toast.success('Workspaces imported', { description: msg, log: 'Workspaces imported' });
     } catch {
       showWsStatus('Import failed — not a valid workspaces file.', true);
