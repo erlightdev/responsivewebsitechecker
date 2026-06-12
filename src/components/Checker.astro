@@ -117,24 +117,124 @@ const groups = [
       <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
     </button>
 
-    <!-- Theme toggle -->
-    <button
-      type="button"
-      id="theme-toggle"
-      class="tip grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-      aria-label="Toggle light/dark mode"
-      data-tip="Toggle theme"
-      data-tip-align="end"
-    >
-      <!-- Sun (shown in dark mode) -->
-      <svg id="icon-sun" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
-      </svg>
-      <!-- Moon (shown in light mode) -->
-      <svg id="icon-moon" class="size-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-      </svg>
-    </button>
+    <!-- Theme menu -->
+    <div class="relative shrink-0">
+      <button
+        type="button"
+        id="theme-btn"
+        class="tip grid size-9 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        aria-label="Open theme menu"
+        aria-haspopup="menu"
+        aria-expanded="false"
+        data-tip="Theme"
+      >
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.012 17.5 2 12 2z"/></svg>
+      </button>
+
+      <!-- Theme dropdown -->
+      <div
+        id="theme-menu"
+        class="absolute right-0 top-full z-50 mt-2 hidden w-56 origin-top-right rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+        role="menu"
+        aria-labelledby="theme-btn"
+      >
+        <p class="px-2 pb-1 pt-1.5 text-xs font-medium text-muted-foreground">Theme</p>
+        <div class="grid grid-cols-3 gap-1 px-1">
+          <button type="button" data-theme-mode="light" role="menuitemradio" aria-checked="false" class="theme-mode flex flex-col items-center gap-1 rounded-sm border border-transparent px-1 py-2 text-xs outline-none hover:bg-accent hover:text-accent-foreground aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary">
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+            Light
+          </button>
+          <button type="button" data-theme-mode="dark" role="menuitemradio" aria-checked="false" class="theme-mode flex flex-col items-center gap-1 rounded-sm border border-transparent px-1 py-2 text-xs outline-none hover:bg-accent hover:text-accent-foreground aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary">
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            Dark
+          </button>
+          <button type="button" data-theme-mode="system" role="menuitemradio" aria-checked="false" class="theme-mode flex flex-col items-center gap-1 rounded-sm border border-transparent px-1 py-2 text-xs outline-none hover:bg-accent hover:text-accent-foreground aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary">
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            System
+          </button>
+        </div>
+
+        <div class="-mx-1 my-1 h-px bg-border"></div>
+        <p class="px-2 pb-1 pt-0.5 text-xs font-medium text-muted-foreground">Color</p>
+        <div class="grid grid-cols-6 gap-1 px-2 pb-1.5 pt-0.5">
+          <button type="button" data-color="emerald" aria-checked="false" aria-label="Emerald" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.7116 0.1798 153.9)"></button>
+          <button type="button" data-color="blue" aria-checked="false" aria-label="Blue" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.58 0.19 256)"></button>
+          <button type="button" data-color="violet" aria-checked="false" aria-label="Violet" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.55 0.22 293)"></button>
+          <button type="button" data-color="rose" aria-checked="false" aria-label="Rose" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.62 0.22 14)"></button>
+          <button type="button" data-color="amber" aria-checked="false" aria-label="Amber" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.77 0.16 70)"></button>
+          <button type="button" data-color="black" aria-checked="false" aria-label="Black" class="color-swatch mx-auto size-5 rounded-full border border-border ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.2 0 0)"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account menu -->
+    <div class="relative shrink-0">
+      <button
+        type="button"
+        id="account-btn"
+        class="grid size-9 place-items-center rounded-full border border-border bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-ring/50"
+        aria-label="Open account menu"
+        aria-haspopup="menu"
+        aria-expanded="false"
+      >
+        A
+      </button>
+
+      <!-- Dropdown (shadcn-style) -->
+      <div
+        id="account-menu"
+        class="absolute right-0 top-full z-50 mt-2 hidden w-60 origin-top-right rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+        role="menu"
+        aria-labelledby="account-btn"
+      >
+        <!-- User label -->
+        <div class="flex items-center gap-2 px-2 py-1.5">
+          <span class="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">A</span>
+          <div class="min-w-0">
+            <p class="truncate text-sm font-medium leading-tight">Admin</p>
+            <p class="truncate text-xs text-muted-foreground">admin@hiver.com.np</p>
+          </div>
+        </div>
+        <div class="-mx-1 my-1 h-px bg-border"></div>
+
+        <!-- Upgrade CTA -->
+        <a href="/billing" role="menuitem" class="menu-item flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-medium text-primary outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+          Upgrade to Pro
+        </a>
+        <div class="-mx-1 my-1 h-px bg-border"></div>
+
+        <!-- Account group -->
+        <a href="/account" role="menuitem" class="menu-item flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Account
+        </a>
+        <a href="/billing" role="menuitem" class="menu-item flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          Billing
+        </a>
+        <a href="/settings" role="menuitem" class="menu-item flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          Settings
+        </a>
+        <button type="button" id="shortcuts-item" role="menuitem" class="menu-item flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
+          Keyboard shortcuts
+          <span class="ml-auto text-xs tracking-widest text-muted-foreground">?</span>
+        </button>
+        <div class="-mx-1 my-1 h-px bg-border"></div>
+
+        <!-- Help + logout -->
+        <a href="/help" role="menuitem" class="menu-item flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          Help &amp; Support
+        </a>
+        <button type="button" id="logout-item" role="menuitem" class="menu-item flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Log out
+        </button>
+      </div>
+    </div>
   </header>
 
   <div class="relative flex min-h-0 flex-1 overflow-hidden">
@@ -270,6 +370,32 @@ const groups = [
         <button type="button" id="delete-cancel" class="h-9 rounded-md border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted">Cancel</button>
         <button type="button" id="delete-confirm" class="h-9 rounded-md bg-destructive px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.03]">Delete</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== Keyboard shortcuts modal ===== -->
+  <div id="shortcuts-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+    <div id="shortcuts-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative z-10 w-full max-w-md rounded-lg border border-border bg-background p-6 shadow-xl">
+      <button type="button" id="shortcuts-close" class="absolute right-4 top-4 grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Close">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 id="shortcuts-title" class="text-lg font-semibold tracking-tight">Keyboard shortcuts</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Speed up common actions.</p>
+      <ul class="mt-5 space-y-2.5 text-sm">
+        <li class="flex items-center justify-between gap-4">
+          <span>Focus URL bar</span>
+          <kbd class="rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">/</kbd>
+        </li>
+        <li class="flex items-center justify-between gap-4">
+          <span>Show this dialog</span>
+          <kbd class="rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">?</kbd>
+        </li>
+        <li class="flex items-center justify-between gap-4">
+          <span>Close dialog / menu</span>
+          <kbd class="rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">Esc</kbd>
+        </li>
+      </ul>
     </div>
   </div>
 </div>
@@ -815,22 +941,106 @@ const groups = [
   zoomLabel.textContent = zoom === 'fit' ? 'Fit' : `${Math.round((zoom as number) * 100)}%`;
   updateCount();
 
-  // ---------- theme toggle ----------
-  const sunIcon  = $('icon-sun');
-  const moonIcon = $('icon-moon');
-
-  function syncThemeIcons() {
-    const isDark = document.documentElement.classList.contains('dark');
-    // dark mode → show sun (click to go light); light mode → show moon (click to go dark)
-    sunIcon.classList.toggle('hidden', !isDark);
-    moonIcon.classList.toggle('hidden', isDark);
+  // ---------- navbar dropdowns (account + theme) ----------
+  const accountMenu = $('account-menu');
+  const menus = [
+    { btn: $('account-btn'), menu: accountMenu },
+    { btn: $('theme-btn'), menu: $('theme-menu') },
+  ];
+  const isOpen = (m: HTMLElement) => m.style.display === 'block';
+  function setMenu(menu: HTMLElement, btn: HTMLElement, open: boolean) {
+    menu.style.display = open ? 'block' : 'none';
+    btn.setAttribute('aria-expanded', String(open));
   }
-  syncThemeIcons();
+  function closeAllMenus() {
+    menus.forEach((m) => setMenu(m.menu, m.btn, false));
+  }
+  const closeAccountMenu = () => setMenu(accountMenu, menus[0].btn, false);
 
-  $('theme-toggle').addEventListener('click', () => {
-    const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('vp-theme', isDark ? 'dark' : 'light');
-    syncThemeIcons();
+  menus.forEach(({ btn, menu }) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = !isOpen(menu);
+      closeAllMenus();
+      setMenu(menu, btn, open);
+    });
+  });
+  document.addEventListener('click', (e) => {
+    menus.forEach(({ btn, menu }) => {
+      if (isOpen(menu) && !menu.contains(e.target as Node) && !btn.contains(e.target as Node)) setMenu(menu, btn, false);
+    });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const open = menus.find((m) => isOpen(m.menu));
+      if (open) { setMenu(open.menu, open.btn, false); open.btn.focus(); }
+    }
+  });
+
+  // ---------- theme (light | dark | system) ----------
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const themeMode = () => (localStorage.getItem('vp-theme') as 'light' | 'dark' | 'system' | null) ?? 'system';
+
+  function applyTheme() {
+    const mode = themeMode();
+    const dark = mode === 'dark' || (mode === 'system' && prefersDark.matches);
+    document.documentElement.classList.toggle('dark', dark);
+    document.querySelectorAll<HTMLElement>('.theme-mode').forEach((b) =>
+      b.setAttribute('aria-checked', String(b.dataset.themeMode === mode))
+    );
+  }
+  document.querySelectorAll<HTMLButtonElement>('.theme-mode').forEach((b) =>
+    b.addEventListener('click', () => {
+      localStorage.setItem('vp-theme', b.dataset.themeMode!);
+      applyTheme();
+    })
+  );
+  // react to OS theme changes while in "system" mode
+  prefersDark.addEventListener('change', () => { if (themeMode() === 'system') applyTheme(); });
+  applyTheme();
+
+  // ---------- color theme (accent palette) ----------
+  const colorTheme = () => localStorage.getItem('vp-color') || 'emerald';
+  function applyColor() {
+    const c = colorTheme();
+    document.documentElement.dataset.theme = c;
+    document.querySelectorAll<HTMLElement>('.color-swatch').forEach((b) =>
+      b.setAttribute('aria-checked', String(b.dataset.color === c))
+    );
+  }
+  document.querySelectorAll<HTMLButtonElement>('.color-swatch').forEach((b) =>
+    b.addEventListener('click', () => {
+      localStorage.setItem('vp-color', b.dataset.color!);
+      applyColor();
+    })
+  );
+  applyColor();
+
+  // ---------- keyboard shortcuts modal ----------
+  $('shortcuts-item').addEventListener('click', () => {
+    closeAccountMenu();
+    $('shortcuts-modal').style.display = 'flex';
+  });
+  $('shortcuts-close').addEventListener('click', () => { $('shortcuts-modal').style.display = 'none'; });
+  $('shortcuts-overlay').addEventListener('click', () => { $('shortcuts-modal').style.display = 'none'; });
+  document.addEventListener('keydown', (e) => {
+    const typing = /^(input|textarea)$/i.test((e.target as HTMLElement).tagName);
+    if (e.key === '?' && !typing) {
+      e.preventDefault();
+      $('shortcuts-modal').style.display = 'flex';
+    }
+    if (e.key === '/' && !typing) {
+      e.preventDefault();
+      input.focus();
+    }
+    if (e.key === 'Escape' && $('shortcuts-modal').style.display === 'flex') $('shortcuts-modal').style.display = 'none';
+  });
+
+  // ---------- logout (placeholder — no auth backend yet) ----------
+  $('logout-item').addEventListener('click', () => {
+    closeAccountMenu();
+    // TODO: wire up real session/sign-out once auth exists
+    console.info('[account] Log out clicked — no auth backend yet.');
   });
 
   // ?url= deep link

@@ -1,0 +1,46 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AccountShell from '../components/AccountShell.astro';
+---
+
+<Layout title="Account — Viewport">
+  <AccountShell active="account" heading="Account" description="Manage your profile and personal information.">
+    <div class="space-y-6">
+      <!-- Profile -->
+      <section class="rounded-lg border border-border bg-card p-6">
+        <div class="flex items-center gap-4">
+          <span class="grid size-16 place-items-center rounded-full bg-primary/10 text-xl font-semibold text-primary">A</span>
+          <div>
+            <button type="button" class="h-9 rounded-md border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted">Change avatar</button>
+            <p class="mt-1.5 text-xs text-muted-foreground">JPG, GIF or PNG. 1MB max.</p>
+          </div>
+        </div>
+
+        <form class="mt-6 grid gap-4 sm:grid-cols-2">
+          <div class="space-y-1.5">
+            <label for="name" class="text-sm font-medium">Full name</label>
+            <input id="name" type="text" value="Admin" class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+          </div>
+          <div class="space-y-1.5">
+            <label for="email" class="text-sm font-medium">Email</label>
+            <input id="email" type="email" value="admin@hiver.com.np" class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+          </div>
+          <div class="space-y-1.5 sm:col-span-2">
+            <label for="company" class="text-sm font-medium">Company</label>
+            <input id="company" type="text" placeholder="Optional" class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+          </div>
+          <div class="sm:col-span-2">
+            <button type="button" class="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02]">Save changes</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Danger zone -->
+      <section class="rounded-lg border border-destructive/40 bg-destructive/5 p-6">
+        <h2 class="text-sm font-semibold">Delete account</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Permanently remove your account and all data. This can't be undone.</p>
+        <button type="button" class="mt-4 h-9 rounded-md bg-destructive px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.02]">Delete account</button>
+      </section>
+    </div>
+  </AccountShell>
+</Layout>

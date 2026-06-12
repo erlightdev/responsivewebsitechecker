@@ -1,0 +1,48 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AccountShell from '../components/AccountShell.astro';
+
+const faqs = [
+  { q: "Why does a site show a blank frame or a notice?", a: "Some sites send X-Frame-Options or Content-Security-Policy headers that block embedding. Those can't be previewed in an iframe and will show a notice instead." },
+  { q: 'How do I add a custom screen size?', a: 'Click "Add Screen" in the toolbar, enter a name plus width and height, and it appears in the sidebar under "Custom".' },
+  { q: 'How do I switch themes?', a: 'Open the account menu (top-right) and choose Light, Dark, or System under Theme.' },
+  { q: 'Can I rotate or reload a device?', a: 'Each preview has rotate, reload, and open-in-new-tab controls. Use the toolbar buttons to rotate or reload all at once.' },
+];
+---
+
+<Layout title="Help & Support — Viewport">
+  <AccountShell active="help" heading="Help & Support" description="Find answers or get in touch.">
+    <div class="space-y-6">
+      <!-- Contact cards -->
+      <section class="grid gap-4 sm:grid-cols-2">
+        <a href="mailto:support@finalforreal.com" class="rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary">
+          <div class="grid size-9 place-items-center rounded-md bg-primary/10 text-primary">
+            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 6 10 7 10-7"/></svg>
+          </div>
+          <h3 class="mt-3 text-sm font-semibold">Email support</h3>
+          <p class="mt-1 text-sm text-muted-foreground">Reach the team at support@finalforreal.com</p>
+        </a>
+        <a href="#" class="rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary">
+          <div class="grid size-9 place-items-center rounded-md bg-primary/10 text-primary">
+            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>
+          </div>
+          <h3 class="mt-3 text-sm font-semibold">Documentation</h3>
+          <p class="mt-1 text-sm text-muted-foreground">Guides and tips for getting the most out of Viewport.</p>
+        </a>
+      </section>
+
+      <!-- FAQ -->
+      <section class="rounded-lg border border-border bg-card divide-y divide-border">
+        {faqs.map((f) => (
+          <details class="group p-5">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+              {f.q}
+              <svg class="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="mt-2 text-sm text-muted-foreground">{f.a}</p>
+          </details>
+        ))}
+      </section>
+    </div>
+  </AccountShell>
+</Layout>

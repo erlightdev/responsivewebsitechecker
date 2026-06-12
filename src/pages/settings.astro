@@ -1,0 +1,59 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AccountShell from '../components/AccountShell.astro';
+---
+
+<Layout title="Settings — Viewport">
+  <AccountShell active="settings" heading="Settings" description="Configure default behavior for the checker.">
+    <div class="space-y-6">
+      <!-- Preferences -->
+      <section class="rounded-lg border border-border bg-card divide-y divide-border">
+        <div class="flex items-center justify-between gap-4 p-5">
+          <div>
+            <p class="text-sm font-medium">Default layout</p>
+            <p class="text-xs text-muted-foreground">How device previews are arranged on the canvas.</p>
+          </div>
+          <select id="pref-layout" class="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50">
+            <option value="row">Horizontal strip</option>
+            <option value="grid">Grid</option>
+          </select>
+        </div>
+        <div class="flex items-center justify-between gap-4 p-5">
+          <div>
+            <p class="text-sm font-medium">Show device frames</p>
+            <p class="text-xs text-muted-foreground">Render phone/tablet/browser bezels around previews.</p>
+          </div>
+          <button type="button" id="pref-frames" role="switch" aria-checked="true" class="pref-toggle relative h-6 w-11 shrink-0 rounded-full bg-primary transition-colors aria-[checked=false]:bg-muted-foreground/40">
+            <span class="absolute left-0.5 top-0.5 size-5 rounded-full bg-white transition-transform"></span>
+          </button>
+        </div>
+        <div class="flex items-center justify-between gap-4 p-5">
+          <div>
+            <p class="text-sm font-medium">Reduce motion</p>
+            <p class="text-xs text-muted-foreground">Minimize animations and transitions.</p>
+          </div>
+          <button type="button" id="pref-motion" role="switch" aria-checked="false" class="pref-toggle relative h-6 w-11 shrink-0 rounded-full bg-primary transition-colors aria-[checked=false]:bg-muted-foreground/40">
+            <span class="absolute left-0.5 top-0.5 size-5 rounded-full bg-white transition-transform"></span>
+          </button>
+        </div>
+      </section>
+
+      <p class="text-xs text-muted-foreground">Theme is set from the account menu in the app (Light, Dark, or System).</p>
+    </div>
+  </AccountShell>
+</Layout>
+
+<script>
+  // Toggle switches reflect their pressed state visually.
+  document.querySelectorAll<HTMLButtonElement>('.pref-toggle').forEach((btn) => {
+    const knob = btn.querySelector<HTMLElement>('span')!;
+    const sync = () => {
+      knob.style.transform = btn.getAttribute('aria-checked') === 'true' ? 'translateX(20px)' : 'translateX(0)';
+    };
+    btn.addEventListener('click', () => {
+      btn.setAttribute('aria-checked', btn.getAttribute('aria-checked') === 'true' ? 'false' : 'true');
+      sync();
+    });
+    sync();
+  });
+</script>

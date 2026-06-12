@@ -1,0 +1,69 @@
+---
+// Shared shell for account-area pages (Account, Billing, Settings, Help).
+interface Props {
+  active: 'account' | 'billing' | 'settings' | 'help';
+  heading: string;
+  description?: string;
+}
+const { active, heading, description } = Astro.props;
+
+const nav = [
+  { id: 'account', label: 'Account', href: '/account', icon: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2 M12 7 m-4 0 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0' },
+  { id: 'billing', label: 'Billing', href: '/billing', icon: 'M2 5h20v14H2z M2 10h20' },
+  { id: 'settings', label: 'Settings', href: '/settings', icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z' },
+  { id: 'help', label: 'Help & Support', href: '/help', icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 17h.01' },
+];
+---
+
+<div class="mx-auto flex min-h-dvh max-w-5xl flex-col px-4 sm:px-6">
+  <!-- Top bar -->
+  <header class="flex items-center gap-3 border-b border-border/60 py-4">
+    <a href="/checker" class="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Back to app" title="Back to app">
+      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </a>
+    <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
+      <span class="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </span>
+      <span>Viewport</span>
+    </a>
+    <span class="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+      <span class="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">A</span>
+      <span class="hidden sm:inline">admin@hiver.com.np</span>
+    </span>
+  </header>
+
+  <div class="flex flex-1 flex-col gap-8 py-8 md:flex-row md:gap-10">
+    <!-- Section nav -->
+    <nav class="shrink-0 md:w-52">
+      <ul class="flex gap-1 overflow-x-auto md:flex-col">
+        {nav.map((n) => (
+          <li>
+            <a
+              href={n.href}
+              class:list={[
+                'flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                n.id === active
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+              ]}
+              aria-current={n.id === active ? 'page' : undefined}
+            >
+              <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={n.icon}/></svg>
+              {n.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <!-- Content -->
+    <main class="min-w-0 flex-1">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold tracking-tight">{heading}</h1>
+        {description && <p class="mt-1 text-sm text-muted-foreground">{description}</p>}
+      </div>
+      <slot />
+    </main>
+  </div>
+</div>

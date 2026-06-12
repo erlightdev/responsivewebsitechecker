@@ -16,13 +16,13 @@ const { title = 'Responsive Website Checker' } = Astro.props;
 		<!-- Run before paint to avoid flash of wrong theme -->
 		<script is:inline>
 			(function () {
+				// 'vp-theme' ∈ 'light' | 'dark' | 'system' (or null → system)
 				const stored = localStorage.getItem('vp-theme');
 				const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-				if (stored === 'light' || (!stored && !prefersDark)) {
-					document.documentElement.classList.remove('dark');
-				} else {
-					document.documentElement.classList.add('dark');
-				}
+				const dark = stored === 'dark' || ((stored === 'system' || !stored) && prefersDark);
+				document.documentElement.classList.toggle('dark', dark);
+				// color theme (accent palette)
+				document.documentElement.dataset.theme = localStorage.getItem('vp-color') || 'emerald';
 			})();
 		</script>
 	</head>
