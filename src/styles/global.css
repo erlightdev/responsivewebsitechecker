@@ -306,3 +306,83 @@
     scrollbar-color: var(--border) transparent;
   }
 }
+
+/* ===== drag-to-reorder device panes (global: panes are built in JS) ===== */
+.drag-handle { cursor: grab; }
+.drag-handle:active { cursor: grabbing; }
+[data-frame-id].dragging { opacity: 0.4; }
+/* while dragging, let dragover events pass through iframes (they'd swallow
+   them otherwise) and avoid stray selection */
+#frames.dragging-active iframe { pointer-events: none; }
+#frames.dragging-active { user-select: none; }
+
+/* ===== shadcn-style tooltip (new-york-v4 look) — dependency-free, attribute-driven.
+   Usage: add class `tip` + `data-tip="text"` to any element. Optional
+   `data-tip-align="start|end"` keeps edge triggers from clipping the viewport.
+   Global so it also applies to JS-built elements (device pane buttons). ===== */
+.tip { position: relative; }
+.tip::before,
+.tip::after {
+  position: absolute;
+  left: 50%;
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+/* bubble */
+.tip::after {
+  content: attr(data-tip);
+  top: calc(100% + 7px);
+  transform: translate(-50%, -3px) scale(0.96);
+  transform-origin: top center;
+  white-space: nowrap;
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  box-shadow: 0 8px 20px -6px rgb(0 0 0 / 0.3);
+}
+/* arrow */
+.tip::before {
+  content: "";
+  top: calc(100% + 3px);
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--primary);
+  border-radius: 2px;
+  transform: translate(-50%, -3px) rotate(45deg);
+}
+.tip:hover::after,
+.tip:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+.tip:hover::before,
+.tip:focus-visible::before {
+  opacity: 1;
+  transform: translate(-50%, 0) rotate(45deg);
+}
+/* edge-aligned bubbles (arrow stays over the trigger center) */
+.tip[data-tip-align="start"]::after {
+  left: 0;
+  transform: translate(0, -3px) scale(0.96);
+  transform-origin: top left;
+}
+.tip[data-tip-align="start"]:hover::after,
+.tip[data-tip-align="start"]:focus-visible::after {
+  transform: translate(0, 0) scale(1);
+}
+.tip[data-tip-align="end"]::after {
+  left: auto;
+  right: 0;
+  transform: translate(0, -3px) scale(0.96);
+  transform-origin: top right;
+}
+.tip[data-tip-align="end"]:hover::after,
+.tip[data-tip-align="end"]:focus-visible::after {
+  transform: translate(0, 0) scale(1);
+}

@@ -13,10 +13,23 @@ import AccountShell from '../components/AccountShell.astro';
             <p class="text-sm font-medium">Default layout</p>
             <p class="text-xs text-muted-foreground">How device previews are arranged on the canvas.</p>
           </div>
-          <select id="pref-layout" class="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50">
-            <option value="row">Horizontal strip</option>
-            <option value="grid">Grid</option>
-          </select>
+          <!-- shadcn-style select -->
+          <div class="select relative shrink-0" data-value="row">
+            <button type="button" class="select-trigger flex h-9 w-44 items-center justify-between gap-2 rounded-md border border-border bg-background px-3 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring/50" aria-haspopup="listbox" aria-expanded="false">
+              <span class="select-value truncate">Horizontal strip</span>
+              <svg class="size-4 shrink-0 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <ul class="select-menu absolute right-0 z-50 mt-1 hidden max-h-60 w-44 overflow-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md" role="listbox">
+              <li role="option" data-value="row" class="select-option flex cursor-default items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                <span class="select-check grid w-4 place-items-center"><svg class="size-4 opacity-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                Horizontal strip
+              </li>
+              <li role="option" data-value="grid" class="select-option flex cursor-default items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                <span class="select-check grid w-4 place-items-center"><svg class="size-4 opacity-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                Grid
+              </li>
+            </ul>
+          </div>
         </div>
         <div class="flex items-center justify-between gap-4 p-5">
           <div>
@@ -55,5 +68,36 @@ import AccountShell from '../components/AccountShell.astro';
       sync();
     });
     sync();
+  });
+
+  // shadcn-style select(s)
+  document.querySelectorAll<HTMLElement>('.select').forEach((root) => {
+    const trigger = root.querySelector<HTMLButtonElement>('.select-trigger')!;
+    const menu = root.querySelector<HTMLElement>('.select-menu')!;
+    const valueEl = root.querySelector<HTMLElement>('.select-value')!;
+    const options = [...root.querySelectorAll<HTMLElement>('.select-option')];
+
+    const open = () => { menu.classList.remove('hidden'); trigger.setAttribute('aria-expanded', 'true'); };
+    const close = () => { menu.classList.add('hidden'); trigger.setAttribute('aria-expanded', 'false'); };
+    const isOpen = () => !menu.classList.contains('hidden');
+
+    const select = (value: string) => {
+      root.dataset.value = value;
+      options.forEach((o) => {
+        const on = o.dataset.value === value;
+        o.setAttribute('aria-selected', String(on));
+        o.querySelector<HTMLElement>('.select-check svg')!.style.opacity = on ? '1' : '0';
+        if (on) valueEl.textContent = o.textContent!.trim();
+      });
+    };
+
+    trigger.addEventListener('click', (e) => { e.stopPropagation(); isOpen() ? close() : open(); });
+    options.forEach((o) =>
+      o.addEventListener('click', () => { select(o.dataset.value!); close(); })
+    );
+    document.addEventListener('click', (e) => { if (!root.contains(e.target as Node)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+    select(root.dataset.value || options[0]?.dataset.value || '');
   });
 </script>
