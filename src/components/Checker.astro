@@ -966,8 +966,13 @@ const groups = [
   });
   clearBtn.addEventListener('click', () => {
     input.value = '';
+    currentUrl = '';
+    latestPageMeta = null;
+    frames.innerHTML = '';
+    emptyState.style.display = 'flex';
     clearBtn.style.display = 'none';
     input.focus();
+    store.save();
   });
 
   document.querySelectorAll<HTMLButtonElement>('.sample-url').forEach((b) =>
