@@ -1,0 +1,271 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Workspaces — Viewport">
+  <div class="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 sm:px-6">
+    <!-- Top bar -->
+    <header class="flex items-center gap-3 border-b border-border/60 py-4">
+      <a href="/checker" class="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Back to app" title="Back to app">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </a>
+      <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
+        <span class="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </span>
+        <span>Viewport</span>
+      </a>
+      <a href="/checker" class="ml-auto h-9 rounded-md bg-primary px-4 text-sm font-semibold leading-9 text-primary-foreground transition-transform hover:scale-[1.03]">Open checker</a>
+    </header>
+
+    <main class="flex-1 py-8">
+      <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">Workspaces</h1>
+          <p class="mt-1 text-sm text-muted-foreground">Saved arrangements of URL, devices, layout and zoom.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="export-btn" class="h-9 rounded-md border border-border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted">Export</button>
+          <button type="button" id="import-btn" class="h-9 rounded-md border border-border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted">Import</button>
+          <input id="import-file" type="file" accept="application/json,.json" class="hidden" />
+        </div>
+      </div>
+
+      <p id="status" class="mb-4 hidden text-sm"></p>
+
+      <!-- Cards -->
+      <div id="grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+
+      <!-- Empty state -->
+      <div id="empty" class="hidden flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center">
+        <div class="grid size-14 place-items-center rounded-md bg-primary/10 text-primary">
+          <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4.5-9 4.5-9-4.5L12 3z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg>
+        </div>
+        <h2 class="mt-4 text-lg font-semibold">No workspaces yet</h2>
+        <p class="mt-1 max-w-sm text-sm text-muted-foreground">Open the checker, set up your devices and URL, then use Workspaces → Save current workspace.</p>
+        <a href="/checker" class="mt-5 h-9 rounded-md bg-primary px-4 text-sm font-semibold leading-9 text-primary-foreground transition-transform hover:scale-[1.03]">Go to checker</a>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== Rename modal ===== -->
+  <div id="rename-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="rename-title">
+    <div id="rename-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background p-6 shadow-xl">
+      <h2 id="rename-title" class="text-lg font-semibold tracking-tight">Rename workspace</h2>
+      <form id="rename-form" class="mt-4 space-y-4">
+        <input id="rename-input" type="text" autocomplete="off" spellcheck="false" class="h-9 w-full rounded-md border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+        <div class="flex justify-end gap-2">
+          <button type="button" id="rename-cancel" class="h-9 rounded-md border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted">Cancel</button>
+          <button type="submit" class="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03]">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Delete confirm modal ===== -->
+  <div id="del-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-labelledby="del-title">
+    <div id="del-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background p-6 shadow-xl">
+      <h2 id="del-title" class="text-lg font-semibold tracking-tight">Delete workspace?</h2>
+      <p class="mt-1 text-sm text-muted-foreground"><span id="del-name" class="font-medium text-foreground"></span> will be permanently removed.</p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" id="del-cancel" class="h-9 rounded-md border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted">Cancel</button>
+        <button type="button" id="del-confirm" class="h-9 rounded-md bg-destructive px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.03]">Delete</button>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  type Device = { id: string; name: string; w: number; h: number; type: string; rotated: boolean };
+  type VPState = { url?: string; layout?: string; zoom?: number | 'fit'; framesOn?: boolean; devices?: Device[]; customScreens?: Device[] };
+  type Workspace = { id: string; name: string; state: VPState };
+
+  const WS_KEY = 'vp-workspaces';
+  const ACTIVE_WS_KEY = 'vp-active-ws';
+  const STATE_KEY = 'vp-state';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const grid = $('grid');
+  const empty = $('empty');
+
+  const load = (): Workspace[] => {
+    try { return JSON.parse(localStorage.getItem(WS_KEY) || '[]'); } catch { return []; }
+  };
+  const save = (list: Workspace[]) => {
+    try { localStorage.setItem(WS_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+  };
+  const activeId = () => localStorage.getItem(ACTIVE_WS_KEY) || '';
+
+  let statusTimer = 0;
+  function status(msg: string, isError = false) {
+    const el = $('status');
+    el.textContent = msg;
+    el.className = `mb-4 text-sm ${isError ? 'text-destructive' : 'text-muted-foreground'}`;
+    el.style.display = 'block';
+    clearTimeout(statusTimer);
+    statusTimer = window.setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const hostOf = (url?: string) => { try { return new URL(url!).hostname; } catch { return ''; } };
+  const zoomLabel = (z?: number | 'fit') => (z === 'fit' || z == null ? 'Fit' : `${Math.round((z as number) * 100)}%`);
+  const layoutLabel = (l?: string) => (l === 'grid' ? 'Grid' : 'Strip');
+
+  function render() {
+    const list = load();
+    const active = activeId();
+    grid.innerHTML = '';
+    empty.style.display = list.length ? 'none' : 'flex';
+    grid.style.display = list.length ? 'grid' : 'none';
+
+    for (const ws of list) {
+      const host = hostOf(ws.state?.url);
+      const count = ws.state?.devices?.length || 0;
+      const isActive = ws.id === active;
+      const fav = host ? `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}` : '';
+
+      const card = document.createElement('div');
+      card.className = `group relative flex flex-col rounded-lg border bg-card p-4 transition-colors hover:border-primary/60 ${isActive ? 'border-primary ring-1 ring-primary/30' : 'border-border'}`;
+      card.innerHTML = `
+        <div class="flex items-start gap-3">
+          <span class="favicon grid size-10 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-background">
+            ${fav ? `<img src="${fav}" alt="" width="24" height="24" class="size-6" />` : ''}
+            <svg class="fallback size-5 text-muted-foreground ${fav ? 'hidden' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <h3 class="min-w-0 flex-1 truncate font-semibold">${esc(ws.name)}</h3>
+              ${isActive ? '<span class="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">Active</span>' : ''}
+            </div>
+            <p class="truncate text-xs text-muted-foreground">${esc(host || 'No URL')}</p>
+          </div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
+          <span class="rounded-full bg-muted px-2 py-0.5">${count} device${count === 1 ? '' : 's'}</span>
+          <span class="rounded-full bg-muted px-2 py-0.5">${layoutLabel(ws.state?.layout)}</span>
+          <span class="rounded-full bg-muted px-2 py-0.5">${zoomLabel(ws.state?.zoom)}</span>
+        </div>
+
+        <div class="mt-4 flex items-center gap-2 border-t border-border/60 pt-3">
+          <button type="button" class="open flex-1 h-8 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02]">Open</button>
+          <button type="button" class="rename grid size-8 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Rename" title="Rename">
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          </button>
+          <button type="button" class="del grid size-8 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive" aria-label="Delete" title="Delete">
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+          </button>
+        </div>`;
+
+      // favicon fallback on load error
+      const img = card.querySelector<HTMLImageElement>('img');
+      const fb = card.querySelector<HTMLElement>('.fallback')!;
+      img?.addEventListener('error', () => { img.style.display = 'none'; fb.classList.remove('hidden'); });
+
+      card.querySelector<HTMLButtonElement>('.open')!.addEventListener('click', () => openWorkspace(ws));
+      card.querySelector<HTMLButtonElement>('.rename')!.addEventListener('click', () => openRename(ws.id, ws.name));
+      card.querySelector<HTMLButtonElement>('.del')!.addEventListener('click', () => openDelete(ws.id, ws.name));
+
+      grid.appendChild(card);
+    }
+  }
+
+  // Open = hand off to the checker via its autosave slot, then navigate.
+  function openWorkspace(ws: Workspace) {
+    try {
+      localStorage.setItem(STATE_KEY, JSON.stringify(ws.state));
+      localStorage.setItem(ACTIVE_WS_KEY, ws.id);
+    } catch { /* ignore */ }
+    location.href = '/checker';
+  }
+
+  // ----- rename -----
+  let renameId = '';
+  const renameModal = $('rename-modal');
+  const renameInput = $<HTMLInputElement>('rename-input');
+  function openRename(id: string, name: string) {
+    renameId = id;
+    renameInput.value = name;
+    renameModal.style.display = 'flex';
+    setTimeout(() => { renameInput.focus(); renameInput.select(); }, 0);
+  }
+  const closeRename = () => { renameModal.style.display = 'none'; };
+  $('rename-cancel').addEventListener('click', closeRename);
+  $('rename-overlay').addEventListener('click', closeRename);
+  ($('rename-form') as unknown as HTMLFormElement).addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = renameInput.value.trim();
+    if (!name) return;
+    const list = load();
+    const ws = list.find((w) => w.id === renameId);
+    if (ws) { ws.name = name; save(list); render(); }
+    closeRename();
+  });
+
+  // ----- delete -----
+  let delId = '';
+  const delModal = $('del-modal');
+  function openDelete(id: string, name: string) {
+    delId = id;
+    $('del-name').textContent = name;
+    delModal.style.display = 'flex';
+    setTimeout(() => $('del-cancel').focus(), 0);
+  }
+  const closeDelete = () => { delModal.style.display = 'none'; };
+  $('del-cancel').addEventListener('click', closeDelete);
+  $('del-overlay').addEventListener('click', closeDelete);
+  $('del-confirm').addEventListener('click', () => {
+    save(load().filter((w) => w.id !== delId));
+    if (activeId() === delId) localStorage.removeItem(ACTIVE_WS_KEY);
+    render();
+    closeDelete();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (renameModal.style.display === 'flex') closeRename();
+    if (delModal.style.display === 'flex') closeDelete();
+  });
+
+  // ----- export / import -----
+  $('export-btn').addEventListener('click', () => {
+    const list = load();
+    const payload = { app: 'viewport', kind: 'workspaces', version: 1, exportedAt: new Date().toISOString(), workspaces: list };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `viewport-workspaces-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    status(`Exported ${list.length} workspace${list.length === 1 ? '' : 's'}.`);
+  });
+
+  const importFile = $<HTMLInputElement>('import-file');
+  $('import-btn').addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', async () => {
+    const file = importFile.files?.[0];
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      const incoming = Array.isArray(data) ? data : data?.workspaces;
+      if (!Array.isArray(incoming)) throw new Error('no workspaces');
+      const valid = incoming.filter((w: any) => w && typeof w.name === 'string' && w.state && Array.isArray(w.state.devices));
+      if (!valid.length) throw new Error('no valid workspaces');
+      const list = load();
+      valid.forEach((w: Workspace, i: number) => list.push({ id: `ws-${Date.now()}-${i}`, name: w.name, state: w.state }));
+      save(list);
+      render();
+      status(`Imported ${valid.length} workspace${valid.length === 1 ? '' : 's'}.`);
+    } catch {
+      status('Import failed — not a valid workspaces file.', true);
+    } finally {
+      importFile.value = '';
+    }
+  });
+
+  render();
+</script>
