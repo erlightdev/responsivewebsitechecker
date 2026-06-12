@@ -1,0 +1,810 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CaptureEditor from '../components/CaptureEditor.astro';
+---
+
+<Layout title="Social Preview — Viewport">
+  <div class="mx-auto flex min-h-dvh max-w-7xl flex-col px-4 sm:px-6">
+    <header class="flex items-center gap-3 border-b border-border/60 py-4">
+      <a href="/checker" class="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Back to app" title="Back to app">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </a>
+      <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
+        <span class="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </span>
+        <span>Viewport</span>
+      </a>
+      <nav class="ml-auto flex items-center gap-2">
+        <a href="/checker" class="hidden h-9 rounded-md border border-border bg-card px-3 text-sm font-medium leading-9 transition-colors hover:bg-muted sm:block">Checker</a>
+        <a href="/captures" class="hidden h-9 rounded-md border border-border bg-card px-3 text-sm font-medium leading-9 transition-colors hover:bg-muted sm:block">Captures</a>
+      </nav>
+      <div class="relative shrink-0">
+        <button type="button" id="capture-btn" class="flex h-9 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:px-3" aria-haspopup="menu" aria-expanded="false" aria-label="Capture social preview">
+          <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+          <span class="hidden md:inline">Capture</span>
+        </button>
+        <div id="capture-menu" class="absolute right-0 top-full z-50 mt-2 hidden w-60 origin-top-right rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md" role="menu" aria-labelledby="capture-btn">
+          <button type="button" id="cap-shot" role="menuitem" class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            Screenshot
+          </button>
+          <button type="button" id="cap-rec5" role="menuitem" class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+            Record 5s
+          </button>
+          <button type="button" id="cap-rec10" role="menuitem" class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+            Record 10s
+          </button>
+          <div class="-mx-1 my-1 h-px bg-border"></div>
+          <a href="/captures" role="menuitem" class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5L9 20"/></svg>
+            View captures
+          </a>
+          <button type="button" id="cap-stop" role="menuitem" class="hidden w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-muted-foreground outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            Stop screen sharing
+          </button>
+          <p id="cap-status" class="hidden px-2 pt-1 text-xs"></p>
+        </div>
+      </div>
+      <div class="relative shrink-0">
+        <button type="button" id="theme-btn" class="grid size-9 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Open theme menu" aria-haspopup="menu" aria-expanded="false">
+          <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.012 17.5 2 12 2z"/></svg>
+        </button>
+        <div id="theme-menu" class="absolute right-0 top-full z-50 mt-2 hidden w-56 origin-top-right rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md" role="menu" aria-labelledby="theme-btn">
+          <p class="px-2 pb-1 pt-1.5 text-xs font-medium text-muted-foreground">Theme</p>
+          <div class="grid grid-cols-3 gap-1 px-1">
+            <button type="button" data-theme-mode="light" role="menuitemradio" aria-checked="false" class="theme-mode flex flex-col items-center gap-1 rounded-sm border border-transparent px-1 py-2 text-xs outline-none hover:bg-accent hover:text-accent-foreground aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary">
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+              Light
+            </button>
+            <button type="button" data-theme-mode="dark" role="menuitemradio" aria-checked="false" class="theme-mode flex flex-col items-center gap-1 rounded-sm border border-transparent px-1 py-2 text-xs outline-none hover:bg-accent hover:text-accent-foreground aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary">
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              Dark
+            </button>
+            <button type="button" data-theme-mode="system" role="menuitemradio" aria-checked="false" class="theme-mode flex flex-col items-center gap-1 rounded-sm border border-transparent px-1 py-2 text-xs outline-none hover:bg-accent hover:text-accent-foreground aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary">
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+              System
+            </button>
+          </div>
+          <div class="-mx-1 my-1 h-px bg-border"></div>
+          <p class="px-2 pb-1 pt-0.5 text-xs font-medium text-muted-foreground">Color</p>
+          <div class="grid grid-cols-6 gap-1 px-2 pb-1.5 pt-0.5">
+            <button type="button" data-color="emerald" aria-checked="false" aria-label="Emerald" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.7116 0.1798 153.9)"></button>
+            <button type="button" data-color="blue" aria-checked="false" aria-label="Blue" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.58 0.19 256)"></button>
+            <button type="button" data-color="violet" aria-checked="false" aria-label="Violet" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.55 0.22 293)"></button>
+            <button type="button" data-color="rose" aria-checked="false" aria-label="Rose" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.62 0.22 14)"></button>
+            <button type="button" data-color="amber" aria-checked="false" aria-label="Amber" class="color-swatch mx-auto size-5 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.77 0.16 70)"></button>
+            <button type="button" data-color="black" aria-checked="false" aria-label="Black" class="color-swatch mx-auto size-5 rounded-full border border-border ring-2 ring-transparent ring-offset-2 ring-offset-popover transition-shadow aria-checked:ring-foreground" style="background:oklch(0.2 0 0)"></button>
+          </div>
+        </div>
+      </div>
+      <div class="relative shrink-0">
+        <button type="button" id="account-btn" class="grid size-9 place-items-center rounded-full border border-border bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-ring/50" aria-label="Open account menu" aria-haspopup="menu" aria-expanded="false">A</button>
+        <div id="account-menu" class="absolute right-0 top-full z-50 mt-2 hidden w-60 origin-top-right rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md" role="menu" aria-labelledby="account-btn">
+          <div class="flex items-center gap-2 px-2 py-1.5">
+            <span class="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">A</span>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium leading-tight">Admin</p>
+              <p class="truncate text-xs text-muted-foreground">admin@hiver.com.np</p>
+            </div>
+          </div>
+          <div class="-mx-1 my-1 h-px bg-border"></div>
+          <a href="/billing" role="menuitem" class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-medium text-primary outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+            Upgrade to Pro
+          </a>
+          <div class="-mx-1 my-1 h-px bg-border"></div>
+          <a href="/account" role="menuitem" class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Account
+          </a>
+          <a href="/billing" role="menuitem" class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            Billing
+          </a>
+          <a href="/settings" role="menuitem" class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            Settings
+          </a>
+          <div class="-mx-1 my-1 h-px bg-border"></div>
+          <a href="/help" role="menuitem" class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+            Help &amp; Support
+          </a>
+          <button type="button" id="logout-item" role="menuitem" class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10">
+            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Log out
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="social-capture-surface" class="flex-1 py-8">
+      <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">Social Preview</h1>
+          <p class="mt-1 text-sm text-muted-foreground">Paste a URL, tune the metadata, and check how it reads across major social platforms before publishing.</p>
+        </div>
+        <div class="flex rounded-full border border-border bg-card p-1 text-xs font-medium text-muted-foreground">
+          <span class="rounded-full bg-primary/10 px-3 py-1 text-primary">Live preview</span>
+          <span class="px-3 py-1">Editable</span>
+        </div>
+      </div>
+
+      <section class="rounded-lg border border-border bg-card p-4">
+        <form id="social-form" class="flex flex-col gap-3 lg:flex-row">
+          <div class="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3 transition-shadow focus-within:ring-2 focus-within:ring-ring/50">
+            <svg class="size-4 shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <input id="preview-url" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="Paste a website or post URL" class="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
+          </div>
+          <button type="submit" id="fetch-btn" class="h-10 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02]">Generate preview</button>
+        </form>
+        <p id="preview-status" class="mt-3 hidden text-sm"></p>
+      </section>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <aside class="space-y-4">
+          <section class="rounded-lg border border-border bg-card p-4">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <h2 class="text-sm font-semibold">Preview content</h2>
+              <button type="button" id="reset-demo" class="text-xs font-medium text-primary hover:underline">Reset demo</button>
+            </div>
+            <div class="space-y-3">
+              <label class="block">
+                <span class="text-xs font-medium text-muted-foreground">Site name</span>
+                <input id="site-input" type="text" class="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+              </label>
+              <label class="block">
+                <span class="text-xs font-medium text-muted-foreground">Title</span>
+                <input id="title-input" type="text" class="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+              </label>
+              <label class="block">
+                <span class="text-xs font-medium text-muted-foreground">Description / caption</span>
+                <textarea id="desc-input" rows="5" class="mt-1 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"></textarea>
+              </label>
+              <label class="block">
+                <span class="text-xs font-medium text-muted-foreground">Image URL</span>
+                <input id="image-input" type="text" inputmode="url" class="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+              </label>
+              <label class="block">
+                <span class="text-xs font-medium text-muted-foreground">Canonical URL</span>
+                <input id="url-input" type="text" inputmode="url" class="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+              </label>
+            </div>
+          </section>
+
+          <section class="rounded-lg border border-border bg-card p-4">
+            <div class="mb-3 flex items-center justify-between gap-2">
+              <h2 class="text-sm font-semibold">Platforms</h2>
+              <div class="flex gap-2">
+                <button type="button" id="all-platforms" class="text-xs font-medium text-primary hover:underline">All</button>
+                <button type="button" id="focus-platforms" class="text-xs font-medium text-muted-foreground hover:text-foreground">Focus</button>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Selected</p>
+                <div id="selected-platform-list" class="flex flex-wrap gap-2"></div>
+              </div>
+              <div>
+                <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Add platforms</p>
+                <div id="available-platform-list" class="flex flex-wrap gap-2"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-lg border border-border bg-card p-4">
+            <h2 class="text-sm font-semibold">Checks</h2>
+            <div id="checks" class="mt-3 space-y-2 text-sm"></div>
+          </section>
+        </aside>
+
+        <section class="min-w-0">
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-sm font-semibold">Platform previews</h2>
+              <p id="preview-count" class="mt-1 text-xs text-muted-foreground"></p>
+            </div>
+            <div class="rounded-md border border-border bg-card p-1 text-xs text-muted-foreground">
+              <button type="button" data-size="grid" class="view-size rounded px-2 py-1 data-[on=true]:bg-muted data-[on=true]:text-foreground" data-on="true">Grid</button>
+              <button type="button" data-size="wide" class="view-size rounded px-2 py-1 data-[on=true]:bg-muted data-[on=true]:text-foreground">Wide</button>
+            </div>
+          </div>
+          <div id="platform-grid" class="grid gap-4 xl:grid-cols-2"></div>
+        </section>
+      </div>
+    </main>
+    <div id="rec-badge" class="fixed bottom-4 left-1/2 z-[60] hidden -translate-x-1/2 items-center gap-2 rounded-full bg-destructive px-4 py-2 text-sm font-semibold text-white shadow-lg">
+      <span class="size-2.5 animate-pulse rounded-full bg-white"></span>
+      <span id="rec-text">Recording...</span>
+    </div>
+  </div>
+  <CaptureEditor />
+</Layout>
+
+<script>
+  import { screenshot, record, isSupported, isSharing, stopSharing } from '../lib/capture-media';
+  import { mountEditor } from '../lib/capture-editor';
+  import type { Capture } from '../lib/captures-db';
+
+  type Preview = { url: string; host: string; siteName: string; title: string; description: string; image: string };
+  type Platform = { id: string; name: string; icon: string; group: 'feed' | 'chat' | 'video' | 'visual' | 'work'; note: string; maxTitle: number; maxDesc: number };
+
+  const platforms: Platform[] = [
+    { id: 'facebook', name: 'Facebook', icon: 'facebook', group: 'feed', note: 'Shared link card in feed', maxTitle: 90, maxDesc: 160 },
+    { id: 'instagram', name: 'Instagram', icon: 'instagram', group: 'visual', note: 'Post or story caption check', maxTitle: 70, maxDesc: 2200 },
+    { id: 'youtube', name: 'YouTube', icon: 'youtube', group: 'video', note: 'Video description link preview', maxTitle: 100, maxDesc: 5000 },
+    { id: 'x', name: 'X', icon: 'x', group: 'feed', note: 'Post card with link attachment', maxTitle: 70, maxDesc: 280 },
+    { id: 'whatsapp', name: 'WhatsApp', icon: 'whatsapp', group: 'chat', note: 'Chat link unfurl', maxTitle: 80, maxDesc: 150 },
+    { id: 'telegram', name: 'Telegram', icon: 'telegram', group: 'chat', note: 'Message link preview', maxTitle: 90, maxDesc: 180 },
+    { id: 'discord', name: 'Discord', icon: 'discord', group: 'chat', note: 'Rich embed in channel', maxTitle: 120, maxDesc: 240 },
+    { id: 'slack', name: 'Slack', icon: 'slack', group: 'work', note: 'Workspace link unfurl', maxTitle: 120, maxDesc: 240 },
+    { id: 'linkedin', name: 'LinkedIn', icon: 'linkedin', group: 'feed', note: 'Professional feed share', maxTitle: 120, maxDesc: 200 },
+    { id: 'reddit', name: 'Reddit', icon: 'reddit', group: 'feed', note: 'Link post preview', maxTitle: 300, maxDesc: 180 },
+    { id: 'pinterest', name: 'Pinterest', icon: 'pinterest', group: 'visual', note: 'Pin preview', maxTitle: 100, maxDesc: 500 },
+    { id: 'threads', name: 'Threads', icon: 'threads', group: 'feed', note: 'Thread link card', maxTitle: 80, maxDesc: 500 },
+    { id: 'tiktok', name: 'TikTok', icon: 'tiktok', group: 'visual', note: 'Bio or caption link preview', maxTitle: 80, maxDesc: 2200 },
+  ];
+
+  const demo: Preview = {
+    url: 'https://example.com/product/launch-checklist',
+    host: 'example.com',
+    siteName: 'Example Studio',
+    title: 'Responsive Launch Checklist for Product Teams',
+    description: 'A practical checklist for testing layouts, social cards, and mobile breakpoints before a public launch.',
+    image: '',
+  };
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const selected = new Set(platforms.map((p) => p.id));
+  let viewSize: 'grid' | 'wide' = 'grid';
+  let current: Preview = { ...demo };
+
+  const form = $('social-form') as unknown as HTMLFormElement;
+  const fetchBtn = $<HTMLButtonElement>('fetch-btn');
+  const statusEl = $('preview-status');
+  const platformGrid = $('platform-grid');
+  const selectedPlatformList = $('selected-platform-list');
+  const availablePlatformList = $('available-platform-list');
+  const previewCount = $('preview-count');
+  const ICON_CDN = 'https://cdn.jsdelivr.net/npm/@thesvg/icons@3.0.15/dist';
+  const iconCache = new Map<string, string>();
+  const inputs = {
+    site: $<HTMLInputElement>('site-input'),
+    title: $<HTMLInputElement>('title-input'),
+    desc: $<HTMLTextAreaElement>('desc-input'),
+    image: $<HTMLInputElement>('image-input'),
+    url: $<HTMLInputElement>('url-input'),
+    requestUrl: $<HTMLInputElement>('preview-url'),
+  };
+
+  function esc(s: string) {
+    return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  }
+
+  function iconSlot(p: Platform, size = 'size-4') {
+    return `<span class="social-icon grid ${size} shrink-0 place-items-center overflow-hidden rounded-sm" data-icon="${esc(p.icon)}" aria-hidden="true"><span class="size-2 rounded-full bg-primary/50"></span></span>`;
+  }
+
+  function svgDataUrl(svg: string) {
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }
+
+  async function hydrateIcons(root: ParentNode = document) {
+    const slots = [...root.querySelectorAll<HTMLElement>('[data-icon]')];
+    await Promise.all(slots.map(async (slot) => {
+      const slug = slot.dataset.icon;
+      if (!slug || slot.dataset.loaded === 'true') return;
+      try {
+        let dataUrl = iconCache.get(slug);
+        if (!dataUrl) {
+          const mod = await import(/* @vite-ignore */ `${ICON_CDN}/${slug}.js`);
+          dataUrl = svgDataUrl(String(mod.svg || ''));
+          iconCache.set(slug, dataUrl);
+        }
+        slot.innerHTML = `<img src="${dataUrl}" alt="" class="size-full object-contain" />`;
+        slot.dataset.loaded = 'true';
+      } catch {
+        slot.innerHTML = '<span class="size-2 rounded-full bg-primary/70"></span>';
+      }
+    }));
+  }
+
+  function hostOf(url: string) {
+    try { return new URL(url).hostname.replace(/^www\./i, ''); } catch { return ''; }
+  }
+
+  function normalize(raw: string) {
+    let value = raw.trim();
+    if (!value) return '';
+    if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
+    try { return new URL(value).href; } catch { return ''; }
+  }
+
+  function titleCase(value: string) {
+    return value.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).trim();
+  }
+
+  function previewFromUrl(raw: string): Preview {
+    const url = normalize(raw);
+    const host = hostOf(url);
+    const path = (() => {
+      try {
+        const last = new URL(url).pathname.split('/').filter(Boolean).pop();
+        return last ? titleCase(decodeURIComponent(last)) : 'Homepage';
+      } catch { return 'Preview'; }
+    })();
+    return {
+      url,
+      host,
+      siteName: titleCase(host.split('.')[0] || 'Website'),
+      title: path,
+      description: `Preview for ${host || 'this URL'}. Edit this copy to match the message you plan to publish.`,
+      image: '',
+    };
+  }
+
+  function syncInputs() {
+    inputs.site.value = current.siteName;
+    inputs.title.value = current.title;
+    inputs.desc.value = current.description;
+    inputs.image.value = current.image;
+    inputs.url.value = current.url;
+    inputs.requestUrl.value = current.url;
+  }
+
+  function readInputs() {
+    current = {
+      siteName: inputs.site.value.trim(),
+      title: inputs.title.value.trim(),
+      description: inputs.desc.value.trim(),
+      image: inputs.image.value.trim(),
+      url: inputs.url.value.trim(),
+      host: hostOf(inputs.url.value.trim()),
+    };
+  }
+
+  function setStatus(message: string, kind: 'ok' | 'error' | 'muted' = 'muted') {
+    statusEl.textContent = message;
+    statusEl.className = `mt-3 text-sm ${kind === 'error' ? 'text-destructive' : kind === 'ok' ? 'text-primary' : 'text-muted-foreground'}`;
+    statusEl.style.display = 'block';
+  }
+
+  function imgBlock(extra = '') {
+    if (current.image) {
+      return `<img src="${esc(current.image)}" alt="" class="size-full object-cover" />`;
+    }
+    return `<div class="grid size-full place-items-center bg-muted text-center text-xs text-muted-foreground ${extra}">No image metadata found</div>`;
+  }
+
+  function faviconUrl() {
+    const host = current.host || hostOf(current.url);
+    return host ? `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}` : '';
+  }
+
+  function faviconSlot(size = 'size-8') {
+    const fav = faviconUrl();
+    const fallback = esc((current.siteName || current.host || 'W').slice(0, 1).toUpperCase());
+    if (!fav) {
+      return `<span class="grid ${size} place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">${fallback}</span>`;
+    }
+    return `<span class="grid ${size} place-items-center overflow-hidden rounded-full border border-border bg-background p-1"><img src="${esc(fav)}" alt="" class="size-full object-contain" /></span>`;
+  }
+
+  function progress(value: number, max: number) {
+    const ok = value <= max;
+    return `<span class="${ok ? 'text-primary' : 'text-destructive'}">${value}/${max}</span>`;
+  }
+
+  function truncate(value: string, max: number) {
+    if (value.length <= max) return value;
+    return `${value.slice(0, Math.max(0, max - 1)).trim()}…`;
+  }
+
+  function renderPreview(p: Platform) {
+    const title = esc(truncate(current.title || 'Untitled preview', p.maxTitle));
+    const desc = esc(truncate(current.description || 'No description yet.', p.maxDesc));
+    const site = esc(current.siteName || current.host || 'Website');
+    const url = esc(current.url || 'https://example.com');
+    const host = esc(current.host || hostOf(current.url) || 'example.com');
+    const chip = `<span class="flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">${iconSlot(p, 'size-3.5')}${esc(p.name)}</span>`;
+
+    if (p.group === 'chat') {
+      return `
+        <div class="rounded-lg border border-border bg-card p-4">
+          <div class="mb-3 flex items-center justify-between gap-2">${chip}<span class="text-xs text-muted-foreground">${esc(p.note)}</span></div>
+          <div class="rounded-lg bg-muted/70 p-3">
+            <p class="mb-2 text-sm">Check this out: <span class="text-primary">${url}</span></p>
+            <div class="overflow-hidden rounded-md border border-border bg-background">
+              <div class="aspect-video">${imgBlock()}</div>
+              <div class="border-l-4 border-primary p-3">
+                <p class="text-xs uppercase tracking-wide text-muted-foreground">${host}</p>
+                <h3 class="mt-1 text-sm font-semibold">${title}</h3>
+                <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">${desc}</p>
+              </div>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-muted-foreground">Title ${progress(current.title.length, p.maxTitle)} · Description ${progress(current.description.length, p.maxDesc)}</p>
+        </div>`;
+    }
+
+    if (p.group === 'video') {
+      return `
+        <div class="rounded-lg border border-border bg-card p-4">
+          <div class="mb-3 flex items-center justify-between gap-2">${chip}<span class="text-xs text-muted-foreground">${esc(p.note)}</span></div>
+          <div class="overflow-hidden rounded-md border border-border bg-background">
+            <div class="aspect-video bg-muted">${imgBlock()}</div>
+            <div class="p-3">
+              <h3 class="line-clamp-2 text-sm font-semibold">${title}</h3>
+              <p class="mt-1 text-xs text-muted-foreground">${site} · link in description</p>
+              <p class="mt-3 rounded-md bg-muted p-2 text-xs text-muted-foreground">${desc}<br /><span class="text-primary">${url}</span></p>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-muted-foreground">Title ${progress(current.title.length, p.maxTitle)} · Description ${progress(current.description.length, p.maxDesc)}</p>
+        </div>`;
+    }
+
+    if (p.group === 'visual') {
+      return `
+        <div class="rounded-lg border border-border bg-card p-4">
+          <div class="mb-3 flex items-center justify-between gap-2">${chip}<span class="text-xs text-muted-foreground">${esc(p.note)}</span></div>
+          <div class="mx-auto max-w-sm overflow-hidden rounded-lg border border-border bg-background">
+            <div class="flex items-center gap-2 border-b border-border px-3 py-2">
+              ${faviconSlot('size-7')}
+              <span class="text-sm font-semibold">${site}</span>
+            </div>
+            <div class="aspect-square bg-muted">${imgBlock()}</div>
+            <div class="space-y-2 p-3">
+              <p class="text-sm"><span class="font-semibold">${site}</span> ${desc}</p>
+              <p class="truncate text-xs text-primary">${url}</p>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-muted-foreground">Caption ${progress(current.description.length, p.maxDesc)} · Title ${progress(current.title.length, p.maxTitle)}</p>
+        </div>`;
+    }
+
+    if (p.group === 'work') {
+      return `
+        <div class="rounded-lg border border-border bg-card p-4">
+          <div class="mb-3 flex items-center justify-between gap-2">${chip}<span class="text-xs text-muted-foreground">${esc(p.note)}</span></div>
+          <div class="rounded-md border border-border bg-background p-3">
+            <div class="flex gap-3">
+              <div class="h-20 w-28 shrink-0 overflow-hidden rounded border border-border bg-muted">${imgBlock()}</div>
+              <div class="min-w-0">
+                <p class="text-xs text-muted-foreground">${host}</p>
+                <h3 class="mt-1 line-clamp-2 text-sm font-semibold">${title}</h3>
+                <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">${desc}</p>
+              </div>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-muted-foreground">Title ${progress(current.title.length, p.maxTitle)} · Description ${progress(current.description.length, p.maxDesc)}</p>
+        </div>`;
+    }
+
+    return `
+      <div class="rounded-lg border border-border bg-card p-4">
+        <div class="mb-3 flex items-center justify-between gap-2">${chip}<span class="text-xs text-muted-foreground">${esc(p.note)}</span></div>
+        <div class="rounded-lg border border-border bg-background">
+          <div class="flex items-center gap-2 p-3">
+            ${faviconSlot('size-8')}
+            <div class="min-w-0">
+              <p class="text-sm font-semibold">${site}</p>
+              <p class="text-xs text-muted-foreground">@${host}</p>
+            </div>
+          </div>
+          <p class="px-3 pb-3 text-sm">${desc}</p>
+          <div class="mx-3 mb-3 overflow-hidden rounded-md border border-border">
+            <div class="aspect-video bg-muted">${imgBlock()}</div>
+            <div class="p-3">
+              <p class="text-xs uppercase tracking-wide text-muted-foreground">${host}</p>
+              <h3 class="mt-1 line-clamp-2 text-sm font-semibold">${title}</h3>
+            </div>
+          </div>
+        </div>
+        <p class="mt-3 text-xs text-muted-foreground">Title ${progress(current.title.length, p.maxTitle)} · Post copy ${progress(current.description.length, p.maxDesc)}</p>
+      </div>`;
+  }
+
+  function renderPlatforms() {
+    const selectedPlatforms = platforms.filter((p) => selected.has(p.id));
+    const availablePlatforms = platforms.filter((p) => !selected.has(p.id));
+
+    selectedPlatformList.innerHTML = selectedPlatforms.length ? selectedPlatforms.map((p) => `
+      <button type="button" data-remove-platform="${p.id}" class="group flex items-center gap-2 rounded-full border border-primary bg-primary/10 py-1 pl-2 pr-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15" aria-label="Remove ${esc(p.name)}">
+        ${iconSlot(p)}
+        <span>${esc(p.name)}</span>
+        <svg class="size-3.5 opacity-70 transition-opacity group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    `).join('') : '<p class="text-xs text-muted-foreground">No platforms selected.</p>';
+
+    availablePlatformList.innerHTML = availablePlatforms.length ? availablePlatforms.map((p) => `
+      <button type="button" data-add-platform="${p.id}" class="flex items-center gap-2 rounded-full border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary" aria-label="Add ${esc(p.name)}">
+        ${iconSlot(p)}
+        <span>${esc(p.name)}</span>
+        <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    `).join('') : '<p class="text-xs text-muted-foreground">All platforms are selected.</p>';
+
+    selectedPlatformList.querySelectorAll<HTMLButtonElement>('[data-remove-platform]').forEach((button) => {
+      button.addEventListener('click', () => {
+        selected.delete(button.dataset.removePlatform!);
+        render();
+      });
+    });
+    availablePlatformList.querySelectorAll<HTMLButtonElement>('[data-add-platform]').forEach((button) => {
+      button.addEventListener('click', () => {
+        selected.add(button.dataset.addPlatform!);
+        render();
+      });
+    });
+    hydrateIcons(selectedPlatformList);
+    hydrateIcons(availablePlatformList);
+  }
+
+  function renderChecks() {
+    const activePlatforms = platforms.filter((p) => selected.has(p.id));
+    const titleMax = activePlatforms.length ? Math.min(...activePlatforms.map((p) => p.maxTitle)) : 0;
+    const descMax = activePlatforms.length ? Math.min(...activePlatforms.map((p) => p.maxDesc)) : 0;
+    const checks = [
+      { label: 'Active platforms', ok: activePlatforms.length > 0, value: String(activePlatforms.length) },
+      { label: 'Title for strict platforms', ok: activePlatforms.length > 0 && current.title.length <= titleMax, value: activePlatforms.length ? `${current.title.length}/${titleMax}` : 'Select one' },
+      { label: 'Copy for strict platforms', ok: activePlatforms.length > 0 && current.description.length <= descMax, value: activePlatforms.length ? `${current.description.length}/${descMax}` : 'Select one' },
+      { label: 'Preview image', ok: !!current.image, value: current.image ? 'Found' : 'Missing' },
+      { label: 'Canonical URL', ok: !!normalize(current.url), value: current.host || 'Missing' },
+    ];
+    $('checks').innerHTML = checks.map((check) => `
+      <div class="flex items-center justify-between gap-3 rounded-md bg-muted px-3 py-2">
+        <span>${esc(check.label)}</span>
+        <span class="${check.ok ? 'text-primary' : 'text-destructive'}">${esc(check.value)}</span>
+      </div>
+    `).join('');
+  }
+
+  function render() {
+    readInputs();
+    const active = platforms.filter((p) => selected.has(p.id));
+    platformGrid.className = viewSize === 'wide' ? 'grid gap-4' : 'grid gap-4 xl:grid-cols-2';
+    platformGrid.innerHTML = active.length
+      ? active.map(renderPreview).join('')
+      : '<div class="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">Select at least one platform to preview.</div>';
+    previewCount.textContent = `${active.length} active platform${active.length === 1 ? '' : 's'} · ${current.host || 'No URL loaded yet'}`;
+    renderPlatforms();
+    renderChecks();
+    hydrateIcons(platformGrid);
+  }
+
+  async function fetchPreview(url: string) {
+    fetchBtn.disabled = true;
+    fetchBtn.textContent = 'Fetching...';
+    setStatus('Fetching social metadata...', 'muted');
+    try {
+      const res = await fetch(`/api/social-preview?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Preview failed');
+      current = {
+        url: data.url || normalize(url),
+        host: data.host || hostOf(data.url || url),
+        siteName: data.siteName || data.host || 'Website',
+        title: data.title || previewFromUrl(url).title,
+        description: data.description || '',
+        image: data.image || '',
+      };
+      syncInputs();
+      render();
+      setStatus('Preview metadata loaded. Edit the fields to test alternate copy before publishing.', 'ok');
+    } catch (error) {
+      current = previewFromUrl(url);
+      syncInputs();
+      render();
+      setStatus(error instanceof Error ? `${error.message} Using URL-based fallback.` : 'Using URL-based fallback.', 'error');
+    } finally {
+      fetchBtn.disabled = false;
+      fetchBtn.textContent = 'Generate preview';
+    }
+  }
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const url = inputs.requestUrl.value.trim();
+    if (!url) {
+      setStatus('Paste a URL first.', 'error');
+      inputs.requestUrl.focus();
+      return;
+    }
+    fetchPreview(url);
+  });
+
+  Object.values(inputs).forEach((input) => {
+    if (input === inputs.requestUrl) return;
+    input.addEventListener('input', render);
+  });
+
+  const menus = [
+    { btn: $('capture-btn'), menu: $('capture-menu') },
+    { btn: $('theme-btn'), menu: $('theme-menu') },
+    { btn: $('account-btn'), menu: $('account-menu') },
+  ];
+  const isOpen = (menu: HTMLElement) => menu.style.display === 'block';
+  function setMenu(menu: HTMLElement, btn: HTMLElement, open: boolean) {
+    menu.style.display = open ? 'block' : 'none';
+    btn.setAttribute('aria-expanded', String(open));
+  }
+  function closeMenus() {
+    menus.forEach(({ btn, menu }) => setMenu(menu, btn, false));
+  }
+  menus.forEach(({ btn, menu }) => {
+    btn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const open = !isOpen(menu);
+      closeMenus();
+      setMenu(menu, btn, open);
+    });
+  });
+  document.addEventListener('click', (event) => {
+    menus.forEach(({ btn, menu }) => {
+      if (isOpen(menu) && !menu.contains(event.target as Node) && !btn.contains(event.target as Node)) setMenu(menu, btn, false);
+    });
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const open = menus.find(({ menu }) => isOpen(menu));
+    if (!open) return;
+    setMenu(open.menu, open.btn, false);
+    open.btn.focus();
+  });
+
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const themeMode = () => (localStorage.getItem('vp-theme') as 'light' | 'dark' | 'system' | null) ?? 'system';
+  function applyTheme() {
+    const mode = themeMode();
+    const dark = mode === 'dark' || (mode === 'system' && prefersDark.matches);
+    document.documentElement.classList.toggle('dark', dark);
+    document.querySelectorAll<HTMLElement>('.theme-mode').forEach((button) =>
+      button.setAttribute('aria-checked', String(button.dataset.themeMode === mode))
+    );
+  }
+  document.querySelectorAll<HTMLButtonElement>('.theme-mode').forEach((button) =>
+    button.addEventListener('click', () => {
+      localStorage.setItem('vp-theme', button.dataset.themeMode!);
+      applyTheme();
+    })
+  );
+  prefersDark.addEventListener('change', () => { if (themeMode() === 'system') applyTheme(); });
+  applyTheme();
+
+  const colorTheme = () => localStorage.getItem('vp-color') || 'emerald';
+  function applyColor() {
+    const color = colorTheme();
+    document.documentElement.dataset.theme = color;
+    document.querySelectorAll<HTMLElement>('.color-swatch').forEach((button) =>
+      button.setAttribute('aria-checked', String(button.dataset.color === color))
+    );
+  }
+  document.querySelectorAll<HTMLButtonElement>('.color-swatch').forEach((button) =>
+    button.addEventListener('click', () => {
+      localStorage.setItem('vp-color', button.dataset.color!);
+      applyColor();
+    })
+  );
+  applyColor();
+  $('logout-item').addEventListener('click', () => {
+    closeMenus();
+    console.info('[account] Log out clicked — no auth backend yet.');
+  });
+
+  const openEditor = mountEditor();
+  const captureSurface = $('social-capture-surface');
+  const capStop = $('cap-stop');
+  const recBadge = $('rec-badge');
+  const recText = $('rec-text');
+  const syncSharing = () => { capStop.style.display = isSharing() ? 'flex' : 'none'; };
+  let capStatusTimer = 0;
+
+  function capStatus(message: string, isError = false) {
+    const el = $('cap-status');
+    el.textContent = message;
+    el.className = `px-2 pt-1 text-xs ${isError ? 'text-destructive' : 'text-muted-foreground'}`;
+    el.style.display = 'block';
+    clearTimeout(capStatusTimer);
+    capStatusTimer = window.setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  function captureTitle() {
+    const site = current.siteName || current.host || hostOf(current.url) || 'Social Preview';
+    return `Social Preview - ${site}`;
+  }
+
+  function baseCapture(type: 'screenshot' | 'video', blob: Blob, thumb: Blob | null, width: number, height: number, durationMs: number): Capture {
+    readInputs();
+    const host = current.host || hostOf(current.url);
+    return {
+      id: crypto.randomUUID(),
+      type,
+      blob,
+      thumb,
+      mime: blob.type,
+      url: current.url,
+      host,
+      title: captureTitle(),
+      description: '',
+      notes: '',
+      annotations: [],
+      durationMs,
+      width,
+      height,
+      createdAt: Date.now(),
+    };
+  }
+
+  if (!isSupported()) {
+    ['cap-shot', 'cap-rec5', 'cap-rec10'].forEach((id) => {
+      const button = $<HTMLButtonElement>(id);
+      button.disabled = true;
+      button.classList.add('opacity-50', 'cursor-not-allowed');
+    });
+  }
+
+  async function doScreenshot() {
+    closeMenus();
+    try {
+      const { blob, width, height } = await screenshot(captureSurface);
+      syncSharing();
+      openEditor(baseCapture('screenshot', blob, blob, width, height, 0));
+    } catch {
+      capStatus('Capture cancelled or blocked.', true);
+    }
+  }
+
+  async function doRecord(seconds: number) {
+    closeMenus();
+    recText.textContent = `Recording... ${seconds}s`;
+    recBadge.style.display = 'flex';
+    try {
+      const { blob, thumb, width, height, durationMs } = await record(seconds * 1000, (remaining) => {
+        recText.textContent = `Recording... ${Math.ceil(remaining / 1000)}s`;
+      });
+      recBadge.style.display = 'none';
+      syncSharing();
+      openEditor(baseCapture('video', blob, thumb, width, height, durationMs));
+    } catch {
+      recBadge.style.display = 'none';
+      capStatus('Recording cancelled or blocked.', true);
+    }
+  }
+
+  $('cap-shot').addEventListener('click', doScreenshot);
+  $('cap-rec5').addEventListener('click', () => doRecord(5));
+  $('cap-rec10').addEventListener('click', () => doRecord(10));
+  capStop.addEventListener('click', () => { stopSharing(); syncSharing(); closeMenus(); });
+  syncSharing();
+
+  $('reset-demo').addEventListener('click', () => {
+    current = { ...demo };
+    syncInputs();
+    render();
+    setStatus('Demo preview restored.', 'muted');
+  });
+
+  $('all-platforms').addEventListener('click', () => {
+    platforms.forEach((p) => selected.add(p.id));
+    render();
+  });
+  $('focus-platforms').addEventListener('click', () => {
+    selected.clear();
+    ['facebook', 'instagram', 'x', 'whatsapp', 'linkedin', 'slack'].forEach((id) => selected.add(id));
+    render();
+  });
+  document.querySelectorAll<HTMLButtonElement>('.view-size').forEach((button) => {
+    button.addEventListener('click', () => {
+      viewSize = button.dataset.size === 'wide' ? 'wide' : 'grid';
+      document.querySelectorAll<HTMLElement>('.view-size').forEach((b) => { b.dataset.on = String(b === button); });
+      render();
+    });
+  });
+
+  syncInputs();
+  render();
+</script>
