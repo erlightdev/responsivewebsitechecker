@@ -1,0 +1,397 @@
+---
+const nav = [
+  { label: 'Features', href: '#features' },
+  { label: 'How it works', href: '#how' },
+  { label: 'Pricing', href: '#pricing' },
+  { label: 'FAQ', href: '#faq' },
+];
+
+const features = [
+  {
+    title: 'Multi-device preview',
+    body: 'See your site rendered across phones, tablets and desktops side by side in a single view.',
+    icon: 'M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25',
+  },
+  {
+    title: 'Pixel-perfect breakpoints',
+    body: 'Test any custom width instantly. Pin the breakpoints that matter to your design system.',
+    icon: 'M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15',
+  },
+  {
+    title: 'Live reload',
+    body: 'Connect your dev server and watch every device update in real time as you ship changes.',
+    icon: 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99',
+  },
+  {
+    title: 'Shareable reports',
+    body: 'Generate a link your whole team can open — no installs, no logins, just the results.',
+    icon: 'M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z',
+  },
+  {
+    title: 'Performance scoring',
+    body: 'Lighthouse-grade metrics for every viewport so you catch layout shift before users do.',
+    icon: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z',
+  },
+  {
+    title: 'Team workspaces',
+    body: 'Organise projects, save device presets and keep everyone testing on the same setup.',
+    icon: 'M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z',
+  },
+];
+
+const steps = [
+  { n: '01', title: 'Paste a URL', body: 'Drop in any link — staging, production or a local tunnel.' },
+  { n: '02', title: 'Pick your devices', body: 'Choose from presets or define your own custom viewports.' },
+  { n: '03', title: 'Ship with confidence', body: 'Spot breakpoint bugs in seconds and share the proof.' },
+];
+
+const plans = [
+  {
+    name: 'Starter',
+    price: '$0',
+    period: '/mo',
+    blurb: 'For tinkerers and side projects.',
+    features: ['5 device presets', '10 checks / day', 'Single user', 'Community support'],
+    cta: 'Start free',
+    featured: false,
+  },
+  {
+    name: 'Pro',
+    price: '$19',
+    period: '/mo',
+    blurb: 'For teams shipping every week.',
+    features: ['Unlimited presets', 'Unlimited checks', 'Up to 10 seats', 'Live reload & reports', 'Priority support'],
+    cta: 'Start 14-day trial',
+    featured: true,
+  },
+  {
+    name: 'Scale',
+    price: '$49',
+    period: '/mo',
+    blurb: 'For agencies and orgs.',
+    features: ['Everything in Pro', 'Unlimited seats', 'SSO & audit log', 'API access', 'Dedicated manager'],
+    cta: 'Contact sales',
+    featured: false,
+  },
+];
+
+const faqs = [
+  { q: 'Do I need to install anything?', a: 'No. It runs entirely in the browser — paste a URL and you are testing in seconds.' },
+  { q: 'Can I test sites behind a login?', a: 'Yes, on Pro and above you can connect authenticated sessions and local dev servers.' },
+  { q: 'How many devices can I preview at once?', a: 'As many as your screen can hold. We render each viewport independently for accuracy.' },
+  { q: 'Is there a free plan?', a: 'Absolutely. Starter is free forever with 10 checks a day and no credit card required.' },
+];
+---
+
+<!-- Announcement / top bar -->
+<div class="relative z-50 bg-primary text-primary-foreground">
+  <div class="mx-auto flex max-w-7xl items-center justify-center gap-2 px-4 py-2 text-center text-sm">
+    <span class="hidden sm:inline-flex items-center rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-semibold">New</span>
+    <p class="font-medium">
+      Live reload is here — preview every device as you code.
+      <a href="#features" class="inline-flex items-center gap-1 font-semibold underline underline-offset-4 hover:opacity-90">
+        See what's new
+        <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </p>
+  </div>
+</div>
+
+<!-- Floating pill navbar -->
+<header class="sticky top-0 z-40 px-4 pt-4">
+  <nav class="mx-auto flex max-w-5xl items-center justify-between gap-4 rounded-md border border-border/60 bg-card/70 p-2 pl-4 shadow-lg backdrop-blur-xl supports-[backdrop-filter]:bg-card/60">
+    <!-- Brand -->
+    <a href="#" class="flex items-center gap-2 font-semibold tracking-tight">
+      <span class="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </span>
+      <span>Viewport</span>
+    </a>
+
+    <!-- Desktop links -->
+    <ul class="hidden items-center gap-1 md:flex">
+      {nav.map((item) => (
+        <li>
+          <a href={item.href} class="rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            {item.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <!-- Desktop actions -->
+    <div class="hidden items-center gap-2 md:flex">
+      <a href="#" class="rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Sign in</a>
+      <a href="#pricing" class="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:scale-[1.03]">Get started</a>
+    </div>
+
+    <!-- Mobile toggle -->
+    <button
+      id="nav-toggle"
+      type="button"
+      aria-label="Toggle menu"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+      class="grid size-10 place-items-center rounded-md text-foreground transition-colors hover:bg-muted md:hidden"
+    >
+      <svg class="size-6 [&_.close]:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <g class="open"><path d="M4 6h16M4 12h16M4 18h16"/></g>
+        <g class="close"><path d="M6 6l12 12M18 6L6 18"/></g>
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="mx-auto mt-2 hidden max-w-5xl overflow-hidden rounded-md border border-border/60 bg-card/90 p-2 shadow-lg backdrop-blur-xl md:hidden">
+    <ul class="flex flex-col">
+      {nav.map((item) => (
+        <li>
+          <a href={item.href} class="block rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            {item.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+    <div class="mt-2 flex flex-col gap-2 border-t border-border/60 pt-2">
+      <a href="#" class="rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Sign in</a>
+      <a href="#pricing" class="rounded-md bg-primary px-3 py-2.5 text-center text-sm font-semibold text-primary-foreground">Get started</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="relative overflow-hidden">
+    <!-- glow backdrop -->
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+      <div class="absolute left-1/2 top-[-6rem] size-[36rem] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl"></div>
+      <div class="absolute right-[-8rem] top-40 size-[24rem] rounded-full bg-accent/20 blur-3xl"></div>
+    </div>
+
+    <div class="mx-auto max-w-7xl px-4 pb-24 pt-20 text-center sm:pt-28">
+      <a href="#how" class="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-sm text-muted-foreground backdrop-blur">
+        <span class="size-2 rounded-full bg-primary"></span>
+        Trusted by 12,000+ front-end teams
+      </a>
+
+      <h1 class="mx-auto mt-6 max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-6xl">
+        Ship responsive sites your users
+        <span class="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">actually love</span>
+      </h1>
+
+      <p class="mx-auto mt-6 max-w-xl text-pretty text-lg text-muted-foreground">
+        Preview any website across every device at once. Catch broken breakpoints,
+        layout shift and overflow bugs before they reach production.
+      </p>
+
+      <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <a href="#pricing" class="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03] sm:w-auto">
+          Start testing free
+        </a>
+        <a href="#how" class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card/60 px-6 py-3 text-sm font-semibold backdrop-blur transition-colors hover:bg-muted sm:w-auto">
+          <svg class="size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Watch demo
+        </a>
+      </div>
+
+      <p class="mt-4 text-xs text-muted-foreground">No credit card required · Free forever plan</p>
+
+      <!-- Browser mock -->
+      <div class="mx-auto mt-16 max-w-4xl rounded-md border border-border/60 bg-card/60 p-2 shadow-xl backdrop-blur">
+        <div class="flex items-center gap-1.5 px-2 py-2">
+          <span class="size-3 rounded-full bg-destructive/70"></span>
+          <span class="size-3 rounded-full bg-chart-3/70"></span>
+          <span class="size-3 rounded-full bg-primary/70"></span>
+          <span class="ml-3 flex-1 truncate rounded-md bg-muted px-3 py-1 text-left text-xs text-muted-foreground">https://yoursite.com</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 p-2 sm:grid-cols-4">
+          {[
+            { d: 'Mobile', h: 'h-10' },
+            { d: 'Tablet', h: 'h-12' },
+            { d: 'Laptop', h: 'h-14' },
+            { d: 'Desktop', h: 'h-16' },
+          ].map(({ d, h }) => (
+            <div class="rounded-md border border-border/60 bg-background/50 p-3">
+              <div class="mb-2 text-left text-xs font-medium text-muted-foreground">{d}</div>
+              <div class="space-y-1.5">
+                <div class="h-2 w-3/4 rounded-full bg-primary/40"></div>
+                <div class="h-2 w-full rounded-full bg-muted"></div>
+                <div class="h-2 w-5/6 rounded-full bg-muted"></div>
+                <div class={`mt-2 ${h} rounded-md bg-gradient-to-br from-primary/20 to-accent/10`}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Logos -->
+  <section class="border-y border-border/60 bg-card/30">
+    <div class="mx-auto max-w-7xl px-4 py-10">
+      <p class="text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">Powering responsive teams at</p>
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-lg font-semibold text-muted-foreground/70">
+        <span>Northwind</span><span>Acme</span><span>Globex</span><span>Initech</span><span>Umbra</span><span>Hooli</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="mx-auto max-w-7xl scroll-mt-24 px-4 py-24">
+    <div class="mx-auto max-w-2xl text-center">
+      <span class="text-sm font-semibold text-primary">Features</span>
+      <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Everything you need to test responsive</h2>
+      <p class="mt-4 text-muted-foreground">One workspace for previewing, measuring and sharing how your site behaves on any screen.</p>
+    </div>
+
+    <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {features.map((f) => (
+        <div class="group rounded-md border border-border/60 bg-card/50 p-6 transition-colors hover:border-primary/50">
+          <div class="grid size-11 place-items-center rounded-md bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={f.icon}/></svg>
+          </div>
+          <h3 class="mt-4 font-semibold">{f.title}</h3>
+          <p class="mt-2 text-sm text-muted-foreground">{f.body}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how" class="scroll-mt-24 border-y border-border/60 bg-card/30">
+    <div class="mx-auto max-w-7xl px-4 py-24">
+      <div class="mx-auto max-w-2xl text-center">
+        <span class="text-sm font-semibold text-primary">How it works</span>
+        <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">From URL to confident in three steps</h2>
+      </div>
+      <div class="mt-14 grid gap-6 md:grid-cols-3">
+        {steps.map((s) => (
+          <div class="relative rounded-md border border-border/60 bg-background/50 p-6">
+            <span class="text-4xl font-bold text-primary/30">{s.n}</span>
+            <h3 class="mt-3 font-semibold">{s.title}</h3>
+            <p class="mt-2 text-sm text-muted-foreground">{s.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="mx-auto max-w-7xl scroll-mt-24 px-4 py-24">
+    <div class="mx-auto max-w-2xl text-center">
+      <span class="text-sm font-semibold text-primary">Pricing</span>
+      <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Simple pricing that scales with you</h2>
+      <p class="mt-4 text-muted-foreground">Start free. Upgrade when your team is ready. Cancel anytime.</p>
+    </div>
+
+    <div class="mt-14 grid items-start gap-6 lg:grid-cols-3">
+      {plans.map((p) => (
+        <div class={`relative rounded-md border bg-card/50 p-8 ${p.featured ? 'border-primary shadow-xl ring-1 ring-primary/40 lg:-mt-4 lg:mb-4' : 'border-border/60'}`}>
+          {p.featured && (
+            <span class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Most popular</span>
+          )}
+          <h3 class="font-semibold">{p.name}</h3>
+          <p class="mt-1 text-sm text-muted-foreground">{p.blurb}</p>
+          <div class="mt-5 flex items-baseline gap-1">
+            <span class="text-4xl font-bold tracking-tight">{p.price}</span>
+            <span class="text-sm text-muted-foreground">{p.period}</span>
+          </div>
+          <a href="#" class={`mt-6 block rounded-md px-4 py-2.5 text-center text-sm font-semibold transition-transform hover:scale-[1.02] ${p.featured ? 'bg-primary text-primary-foreground shadow-lg' : 'border border-border bg-background/50 hover:bg-muted'}`}>
+            {p.cta}
+          </a>
+          <ul class="mt-6 space-y-3 text-sm">
+            {p.features.map((feat) => (
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 size-4 shrink-0 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                <span class="text-muted-foreground">{feat}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="scroll-mt-24 border-t border-border/60 bg-card/30">
+    <div class="mx-auto max-w-3xl px-4 py-24">
+      <div class="text-center">
+        <span class="text-sm font-semibold text-primary">FAQ</span>
+        <h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Frequently asked questions</h2>
+      </div>
+      <div class="mt-10 divide-y divide-border/60 overflow-hidden rounded-md border border-border/60 bg-background/50">
+        {faqs.map((f) => (
+          <details class="group px-6 py-4">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-medium">
+              {f.q}
+              <svg class="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-45" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <p class="mt-3 text-sm text-muted-foreground">{f.a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="mx-auto max-w-7xl px-4 py-24">
+    <div class="relative overflow-hidden rounded-md border border-primary/30 bg-gradient-to-br from-primary/15 via-card to-accent/10 px-6 py-16 text-center">
+      <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+        <div class="absolute left-1/2 top-0 size-72 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl"></div>
+      </div>
+      <h2 class="mx-auto max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">Stop guessing how your site looks on mobile</h2>
+      <p class="mx-auto mt-4 max-w-xl text-muted-foreground">Join thousands of teams shipping pixel-perfect, responsive experiences every day.</p>
+      <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <a href="#" class="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03] sm:w-auto">Get started free</a>
+        <a href="#features" class="w-full rounded-md border border-border bg-background/50 px-6 py-3 text-sm font-semibold transition-colors hover:bg-muted sm:w-auto">Explore features</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="border-t border-border/60">
+  <div class="mx-auto max-w-7xl px-4 py-12">
+    <div class="flex flex-col items-center justify-between gap-6 sm:flex-row">
+      <a href="#" class="flex items-center gap-2 font-semibold tracking-tight">
+        <span class="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </span>
+        Viewport
+      </a>
+      <nav class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+        <a href="#features" class="hover:text-foreground">Features</a>
+        <a href="#pricing" class="hover:text-foreground">Pricing</a>
+        <a href="#faq" class="hover:text-foreground">FAQ</a>
+        <a href="#" class="hover:text-foreground">Privacy</a>
+        <a href="#" class="hover:text-foreground">Terms</a>
+      </nav>
+    </div>
+    <div class="mt-8 border-t border-border/60 pt-6 text-center text-sm text-muted-foreground">
+      © 2026 Viewport. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+<script>
+  const toggle = document.getElementById('nav-toggle');
+  const menu = document.getElementById('mobile-menu');
+  const icon = toggle?.querySelector('svg');
+
+  toggle?.addEventListener('click', () => {
+    const open = menu?.classList.toggle('hidden') === false;
+    toggle.setAttribute('aria-expanded', String(open));
+    icon?.querySelector('.open')?.classList.toggle('hidden', open);
+    icon?.querySelector('.close')?.classList.toggle('hidden', !open);
+  });
+
+  // Close mobile menu after navigating to an anchor
+  menu?.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
+      menu.classList.add('hidden');
+      toggle?.setAttribute('aria-expanded', 'false');
+      icon?.querySelector('.open')?.classList.remove('hidden');
+      icon?.querySelector('.close')?.classList.add('hidden');
+    });
+  });
+</script>
