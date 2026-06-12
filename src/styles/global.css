@@ -125,6 +125,11 @@
   --accent: oklch(0.3400 0.0800 256); --accent-foreground: oklch(0.9800 0 0);
   --secondary: oklch(0.3000 0.0600 256); --secondary-foreground: oklch(0.9800 0 0);
   --sidebar-accent: oklch(0.3000 0.0700 256); --sidebar-accent-foreground: oklch(0.9800 0 0);
+  --background: oklch(0.1750 0.0250 256);
+  --card: oklch(0.2150 0.0270 256); --popover: oklch(0.2150 0.0270 256);
+  --muted: oklch(0.2550 0.0250 256);
+  --border: oklch(0.3000 0.0180 256); --input: oklch(0.3200 0.0180 256);
+  --sidebar: oklch(0.1500 0.0270 256);
 }
 /* Violet */
 [data-theme="violet"] {
@@ -140,6 +145,11 @@
   --accent: oklch(0.3400 0.1000 293); --accent-foreground: oklch(0.9800 0 0);
   --secondary: oklch(0.3000 0.0700 293); --secondary-foreground: oklch(0.9800 0 0);
   --sidebar-accent: oklch(0.3000 0.0900 293); --sidebar-accent-foreground: oklch(0.9800 0 0);
+  --background: oklch(0.1750 0.0270 293);
+  --card: oklch(0.2150 0.0290 293); --popover: oklch(0.2150 0.0290 293);
+  --muted: oklch(0.2550 0.0270 293);
+  --border: oklch(0.3000 0.0200 293); --input: oklch(0.3200 0.0200 293);
+  --sidebar: oklch(0.1500 0.0290 293);
 }
 /* Rose */
 [data-theme="rose"] {
@@ -155,6 +165,11 @@
   --accent: oklch(0.3500 0.1100 14); --accent-foreground: oklch(0.9800 0 0);
   --secondary: oklch(0.3100 0.0800 14); --secondary-foreground: oklch(0.9800 0 0);
   --sidebar-accent: oklch(0.3100 0.1000 14); --sidebar-accent-foreground: oklch(0.9800 0 0);
+  --background: oklch(0.1800 0.0260 14);
+  --card: oklch(0.2200 0.0280 14); --popover: oklch(0.2200 0.0280 14);
+  --muted: oklch(0.2600 0.0260 14);
+  --border: oklch(0.3050 0.0190 14); --input: oklch(0.3250 0.0190 14);
+  --sidebar: oklch(0.1550 0.0280 14);
 }
 /* Amber */
 [data-theme="amber"] {
@@ -170,6 +185,11 @@
   --accent: oklch(0.3600 0.0700 65); --accent-foreground: oklch(0.9800 0 0);
   --secondary: oklch(0.3200 0.0500 65); --secondary-foreground: oklch(0.9800 0 0);
   --sidebar-accent: oklch(0.3200 0.0600 65); --sidebar-accent-foreground: oklch(0.9800 0 0);
+  --background: oklch(0.1780 0.0220 70);
+  --card: oklch(0.2180 0.0240 70); --popover: oklch(0.2180 0.0240 70);
+  --muted: oklch(0.2580 0.0220 70);
+  --border: oklch(0.3020 0.0170 70); --input: oklch(0.3220 0.0170 70);
+  --sidebar: oklch(0.1520 0.0240 70);
 }
 /* Black (monochrome) */
 [data-theme="black"] {
@@ -185,6 +205,11 @@
   --accent: oklch(0.3000 0 0); --accent-foreground: oklch(0.9800 0 0);
   --secondary: oklch(0.2800 0 0); --secondary-foreground: oklch(0.9800 0 0);
   --sidebar-accent: oklch(0.3000 0 0); --sidebar-accent-foreground: oklch(0.9800 0 0);
+  --background: oklch(0.1650 0 0);
+  --card: oklch(0.2050 0 0); --popover: oklch(0.2050 0 0);
+  --muted: oklch(0.2550 0 0);
+  --border: oklch(0.3000 0 0); --input: oklch(0.3200 0 0);
+  --sidebar: oklch(0.1400 0 0);
 }
 
 @theme inline {
@@ -246,6 +271,19 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Neutralize browser autofill (Chrome paints a white/blue bg by default) */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--foreground);
+    -webkit-box-shadow: 0 0 0 1000px var(--card) inset;
+    box-shadow: 0 0 0 1000px var(--card) inset;
+    caret-color: var(--foreground);
+    /* delay the bg repaint effectively forever so it never flashes white */
+    transition: background-color 9999s ease-in-out 0s;
   }
 
   /* Custom scrollbars — thin and themed */
