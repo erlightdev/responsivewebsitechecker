@@ -312,6 +312,20 @@ const groups = [
 
   const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+  // Build a same-origin proxy URL whose path mirrors the target's, so SPA
+  // routers (which branch on location.pathname) see the real route. The target
+  // origin rides along in a __vphost marker the proxy middleware reads.
+  function toProxy(raw: string): string {
+    try {
+      const u = new URL(raw);
+      const params = new URLSearchParams(u.search);
+      params.set('__vphost', u.origin);
+      return `${u.pathname}?${params.toString()}${u.hash}`;
+    } catch {
+      return raw;
+    }
+  }
+
   // ---------- pane rendering ----------
   function pane(d: Device): HTMLElement {
     const w = d.rotated ? d.h : d.w;
@@ -404,7 +418,7 @@ const groups = [
 
     const startLoad = () => {
       loader.style.display = 'grid';
-      iframe.src = `/api/proxy?url=${encodeURIComponent(currentUrl)}`;
+      iframe.src = toProxy(currentUrl);
       iframe.addEventListener('load', () => { loader.style.display = 'none'; }, { once: true });
     };
     startLoad();

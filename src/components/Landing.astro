@@ -204,17 +204,33 @@ const faqs = [
         layout shift and overflow bugs before they reach production.
       </p>
 
-      <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <a href="/checker" class="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03] sm:w-auto">
-          Start testing free
-        </a>
-        <a href="#how" class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card/60 px-6 py-3 text-sm font-semibold backdrop-blur transition-colors hover:bg-muted sm:w-auto">
-          <svg class="size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <!-- Hero URL search → sends site to the checker -->
+      <form id="hero-form" class="mx-auto mt-8 flex max-w-xl flex-col items-stretch gap-2 sm:flex-row">
+        <div class="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-card/70 px-3 shadow-lg backdrop-blur transition-shadow focus-within:ring-2 focus-within:ring-ring/50">
+          <svg class="size-5 shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <input
+            id="hero-input"
+            type="text"
+            inputmode="url"
+            autocomplete="url"
+            spellcheck="false"
+            placeholder="Enter a website URL — e.g. example.com"
+            class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+        <button type="submit" class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03]">
+          Test it free
+          <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+
+      <div class="mt-4 flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground sm:flex-row sm:gap-3">
+        <span>No credit card required · Free forever plan</span>
+        <a href="#how" class="inline-flex items-center gap-1.5 font-medium text-foreground/80 hover:text-foreground">
+          <svg class="size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
           Watch demo
         </a>
       </div>
-
-      <p class="mt-4 text-xs text-muted-foreground">No credit card required · Free forever plan</p>
 
       <!-- Browser mock -->
       <div class="mx-auto mt-16 max-w-4xl rounded-md border border-border/60 bg-card/60 p-2 shadow-xl backdrop-blur">
@@ -421,5 +437,17 @@ const faqs = [
       const isDark = document.documentElement.classList.toggle('dark');
       localStorage.setItem('vp-theme', isDark ? 'dark' : 'light');
     });
+  });
+
+  // Hero URL search → hand off to the checker
+  const heroForm = document.getElementById('hero-form');
+  const heroInput = document.getElementById('hero-input');
+  heroForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const raw = heroInput?.value.trim();
+    const target = raw
+      ? `/checker?url=${encodeURIComponent(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw)}`
+      : '/checker';
+    window.location.href = target;
   });
 </script>
