@@ -79,6 +79,9 @@ export async function screenshot(cropEl?: HTMLElement | null): Promise<{ blob: B
   canvas.height = Math.max(1, sh);
   canvas.getContext('2d')!.drawImage(v, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
   const blob = await toBlob(canvas, 'image/webp', 0.92);
+  // release the display stream so the browser's "Sharing this tab" banner
+  // clears immediately after the grab (a screenshot is a one-shot action)
+  stopSharing();
   return { blob, width: canvas.width, height: canvas.height };
 }
 

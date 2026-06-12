@@ -229,6 +229,7 @@ import CaptureEditor from '../components/CaptureEditor.astro';
   import { screenshot, record, isSupported, isSharing, stopSharing } from '../lib/capture-media';
   import { mountEditor } from '../lib/capture-editor';
   import type { Capture } from '../lib/captures-db';
+  import { toast } from '../lib/toast';
 
   type Preview = { url: string; host: string; siteName: string; title: string; description: string; image: string };
   type Platform = { id: string; name: string; icon: string; group: 'feed' | 'chat' | 'video' | 'visual' | 'work'; note: string; maxTitle: number; maxDesc: number };
@@ -595,11 +596,13 @@ import CaptureEditor from '../components/CaptureEditor.astro';
       syncInputs();
       render();
       setStatus('Preview metadata loaded. Edit the fields to test alternate copy before publishing.', 'ok');
+      toast.success('Preview generated', { description: current.host || current.url, log: 'Social preview generated' });
     } catch (error) {
       current = previewFromUrl(url);
       syncInputs();
       render();
       setStatus(error instanceof Error ? `${error.message} Using URL-based fallback.` : 'Using URL-based fallback.', 'error');
+      toast.warning('Using URL fallback', { description: 'Could not fetch metadata; generated from the URL.', log: 'Social preview fallback' });
     } finally {
       fetchBtn.disabled = false;
       fetchBtn.textContent = 'Generate preview';
@@ -703,6 +706,11 @@ import CaptureEditor from '../components/CaptureEditor.astro';
   const syncSharing = () => { capStop.style.display = isSharing() ? 'flex' : 'none'; };
   let capStatusTimer = 0;
 
+  const onCaptureSaved = (c: Capture) => {
+    const label = c.type === 'video' ? 'Recording saved' : 'Screenshot saved';
+    toast.success(label, { description: c.title || c.host || 'Saved to Captures', log: label });
+  };
+
   function capStatus(message: string, isError = false) {
     const el = $('cap-status');
     el.textContent = message;
@@ -752,9 +760,10 @@ import CaptureEditor from '../components/CaptureEditor.astro';
     try {
       const { blob, width, height } = await screenshot(captureSurface);
       syncSharing();
-      openEditor(baseCapture('screenshot', blob, blob, width, height, 0));
+      openEditor(baseCapture('screenshot', blob, blob, width, height, 0), onCaptureSaved);
     } catch {
       capStatus('Capture cancelled or blocked.', true);
+      toast.warning('Screenshot cancelled', { log: 'Screenshot cancelled' });
     }
   }
 
@@ -768,10 +777,11 @@ import CaptureEditor from '../components/CaptureEditor.astro';
       });
       recBadge.style.display = 'none';
       syncSharing();
-      openEditor(baseCapture('video', blob, thumb, width, height, durationMs));
+      openEditor(baseCapture('video', blob, thumb, width, height, durationMs), onCaptureSaved);
     } catch {
       recBadge.style.display = 'none';
       capStatus('Recording cancelled or blocked.', true);
+      toast.warning('Recording cancelled', { log: 'Recording cancelled' });
     }
   }
 
