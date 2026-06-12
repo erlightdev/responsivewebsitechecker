@@ -1,0 +1,150 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CaptureEditor from '../components/CaptureEditor.astro';
+---
+
+<Layout title="Captures — Viewport">
+  <div class="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 sm:px-6">
+    <!-- Top bar -->
+    <header class="flex items-center gap-3 border-b border-border/60 py-4">
+      <a href="/checker" class="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Back to app" title="Back to app">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </a>
+      <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
+        <span class="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </span>
+        <span>Viewport</span>
+      </a>
+      <a href="/checker" class="ml-auto h-9 rounded-md bg-primary px-4 text-sm font-semibold leading-9 text-primary-foreground transition-transform hover:scale-[1.03]">Open checker</a>
+    </header>
+
+    <main class="flex-1 py-8">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold tracking-tight">Captures</h1>
+        <p class="mt-1 text-sm text-muted-foreground">Screenshots and recordings of your previews, with annotations.</p>
+      </div>
+
+      <div id="grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+
+      <div id="empty" class="hidden flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center">
+        <div class="grid size-14 place-items-center rounded-md bg-primary/10 text-primary">
+          <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        </div>
+        <h2 class="mt-4 text-lg font-semibold">No captures yet</h2>
+        <p class="mt-1 max-w-sm text-sm text-muted-foreground">Open the checker and use Capture → Screenshot or Record to grab your previews.</p>
+        <a href="/checker" class="mt-5 h-9 rounded-md bg-primary px-4 text-sm font-semibold leading-9 text-primary-foreground transition-transform hover:scale-[1.03]">Go to checker</a>
+      </div>
+    </main>
+  </div>
+
+  <!-- Delete confirm -->
+  <div id="del-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4" role="alertdialog" aria-modal="true">
+    <div id="del-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background p-6 shadow-xl">
+      <h2 class="text-lg font-semibold tracking-tight">Delete capture?</h2>
+      <p class="mt-1 text-sm text-muted-foreground"><span id="del-name" class="font-medium text-foreground"></span> will be permanently removed.</p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" id="del-cancel" class="h-9 rounded-md border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted">Cancel</button>
+        <button type="button" id="del-confirm" class="h-9 rounded-md bg-destructive px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.03]">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <CaptureEditor />
+</Layout>
+
+<script>
+  import { allCaptures, deleteCapture, type Capture } from '../lib/captures-db';
+  import { mountEditor } from '../lib/capture-editor';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const grid = $('grid');
+  const empty = $('empty');
+  const openEditor = mountEditor();
+
+  let urls: string[] = [];
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const fmt = (t: number) => new Date(t).toLocaleString();
+
+  function download(c: Capture) {
+    const url = URL.createObjectURL(c.blob);
+    const a = document.createElement('a');
+    const ext = c.type === 'video' ? 'webm' : 'webp';
+    const base = (c.title || c.host || 'capture').replace(/[^\w.-]+/g, '-').slice(0, 60);
+    a.href = url;
+    a.download = `${base}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function render() {
+    urls.forEach(URL.revokeObjectURL);
+    urls = [];
+    const list = await allCaptures();
+    grid.innerHTML = '';
+    empty.style.display = list.length ? 'none' : 'flex';
+    grid.style.display = list.length ? 'grid' : 'none';
+
+    for (const c of list) {
+      const thumbBlob = c.thumb || (c.type === 'screenshot' ? c.blob : null);
+      const thumbUrl = thumbBlob ? URL.createObjectURL(thumbBlob) : '';
+      if (thumbUrl) urls.push(thumbUrl);
+      const dur = c.durationMs ? `${Math.round(c.durationMs / 1000)}s` : '';
+      const notes = c.annotations?.length ? `${c.annotations.length} marker${c.annotations.length === 1 ? '' : 's'}` : '';
+
+      const card = document.createElement('div');
+      card.className = 'group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/60';
+      card.innerHTML = `
+        <button type="button" class="open relative block aspect-video w-full overflow-hidden bg-muted">
+          ${thumbUrl ? `<img src="${thumbUrl}" alt="" class="size-full object-cover" />` : '<span class="grid size-full place-items-center text-muted-foreground"><svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>'}
+          <span class="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">
+            ${c.type === 'video' ? `<svg class="size-3" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> ${dur}` : `<svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg> Shot`}
+          </span>
+        </button>
+        <div class="flex flex-1 flex-col p-3">
+          <h3 class="truncate text-sm font-semibold">${esc(c.title || 'Untitled capture')}</h3>
+          <p class="truncate text-xs text-muted-foreground">${esc(c.host || 'no URL')} · ${fmt(c.createdAt)}</p>
+          ${notes ? `<p class="mt-1 text-xs text-primary">${notes}</p>` : ''}
+          <div class="mt-3 flex items-center gap-2 border-t border-border/60 pt-2.5">
+            <button type="button" class="edit flex-1 h-8 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02]">Open / Edit</button>
+            <button type="button" class="dl grid size-8 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Download" title="Download">
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+            </button>
+            <button type="button" class="del grid size-8 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive" aria-label="Delete" title="Delete">
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            </button>
+          </div>
+        </div>`;
+
+      const openIt = () => openEditor(c, render);
+      card.querySelector<HTMLButtonElement>('.open')!.addEventListener('click', openIt);
+      card.querySelector<HTMLButtonElement>('.edit')!.addEventListener('click', openIt);
+      card.querySelector<HTMLButtonElement>('.dl')!.addEventListener('click', () => download(c));
+      card.querySelector<HTMLButtonElement>('.del')!.addEventListener('click', () => openDelete(c.id, c.title || 'This capture'));
+      grid.appendChild(card);
+    }
+  }
+
+  // delete confirm
+  let delId = '';
+  const delModal = $('del-modal');
+  function openDelete(id: string, name: string) {
+    delId = id;
+    $('del-name').textContent = name;
+    delModal.style.display = 'flex';
+  }
+  const closeDelete = () => { delModal.style.display = 'none'; };
+  $('del-cancel').addEventListener('click', closeDelete);
+  $('del-overlay').addEventListener('click', closeDelete);
+  $('del-confirm').addEventListener('click', async () => {
+    await deleteCapture(delId);
+    closeDelete();
+    render();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && delModal.style.display === 'flex') closeDelete(); });
+
+  render();
+</script>

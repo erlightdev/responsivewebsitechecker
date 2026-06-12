@@ -1,0 +1,70 @@
+---
+// Shared annotation editor modal. Markup only — logic lives in
+// src/lib/capture-editor.ts (mountEditor). Include this once per page that
+// captures or edits, then call mountEditor() from the page script.
+---
+
+<div id="capture-editor" class="fixed inset-0 z-[60] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="ce-heading">
+  <div id="ce-bg" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
+  <div class="relative z-10 flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-border bg-background shadow-xl">
+    <!-- header -->
+    <div class="flex items-center justify-between border-b border-border px-4 py-3">
+      <h2 id="ce-heading" class="text-sm font-semibold tracking-tight">Edit capture</h2>
+      <button type="button" id="ce-close" class="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Close">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="grid min-h-0 flex-1 gap-0 overflow-hidden md:grid-cols-[1fr_20rem]">
+      <!-- media + annotation surface -->
+      <div class="flex min-h-0 flex-col bg-muted/30">
+        <!-- toolbar -->
+        <div class="flex flex-wrap items-center gap-1.5 border-b border-border/60 px-3 py-2 text-sm">
+          <button type="button" id="ce-tool-text" class="ce-tool flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed="false">
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg>
+            Text
+          </button>
+          <button type="button" id="ce-tool-click" class="ce-tool flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed="false">
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9l5 12 1.8-5.2L21 14 9 9z"/><path d="M7.2 2.2 8 5M5 7l-2.8-.8M5 12H2M9.2 4.8 7 7"/></svg>
+            Click event
+          </button>
+          <span id="ce-tool-hint" class="ml-1 text-xs text-muted-foreground"></span>
+        </div>
+        <!-- media -->
+        <div class="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
+          <div id="ce-media" class="relative inline-block max-w-full select-none leading-none">
+            <!-- img/video injected here -->
+            <div id="ce-overlay" class="absolute inset-0"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- meta panel -->
+      <div class="flex min-h-0 flex-col gap-4 overflow-y-auto border-t border-border p-4 md:border-l md:border-t-0">
+        <div class="space-y-1.5">
+          <label for="ce-title" class="text-xs font-medium text-muted-foreground">Title</label>
+          <input id="ce-title" type="text" placeholder="Untitled capture" class="h-9 w-full rounded-md border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+        </div>
+        <div class="space-y-1.5">
+          <label for="ce-desc" class="text-xs font-medium text-muted-foreground">Description</label>
+          <textarea id="ce-desc" rows="3" placeholder="What does this show?" class="w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"></textarea>
+        </div>
+        <div class="space-y-1.5">
+          <label for="ce-notes" class="text-xs font-medium text-muted-foreground">Notes</label>
+          <textarea id="ce-notes" rows="3" placeholder="Internal notes…" class="w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"></textarea>
+        </div>
+        <p id="ce-meta" class="text-xs leading-relaxed text-muted-foreground"></p>
+      </div>
+    </div>
+
+    <!-- footer -->
+    <div class="flex items-center justify-between gap-2 border-t border-border px-4 py-3">
+      <button type="button" id="ce-clear" class="text-xs font-medium text-muted-foreground hover:text-destructive">Clear annotations</button>
+      <div class="flex gap-2">
+        <button type="button" id="ce-cancel" class="h-9 rounded-md border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted">Cancel</button>
+        <button type="button" id="ce-save" class="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03]">Save</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,4 +1,5 @@
 ---
+import CaptureEditor from './CaptureEditor.astro';
 // Device catalog, grouped Polypane-style. Panes are rendered client-side.
 const groups = [
   {
@@ -120,6 +121,39 @@ const groups = [
         </button>
         <input id="ws-file" type="file" accept="application/json,.json" class="hidden" />
         <p id="ws-status" class="hidden px-2 pt-1 text-xs"></p>
+      </div>
+    </div>
+
+    <!-- Capture -->
+    <div class="relative shrink-0">
+      <button type="button" id="capture-btn" class="tip flex h-9 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:px-3" aria-haspopup="menu" aria-expanded="false" aria-label="Capture" data-tip="Screenshot & record">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        <span class="hidden md:inline">Capture</span>
+      </button>
+
+      <div id="capture-menu" class="absolute left-0 top-full z-50 mt-2 hidden w-60 origin-top-left rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md" role="menu" aria-labelledby="capture-btn">
+        <button type="button" id="cap-shot" role="menuitem" class="menu-item flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+          Screenshot
+        </button>
+        <button type="button" id="cap-rec5" role="menuitem" class="menu-item flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+          Record 5s
+        </button>
+        <button type="button" id="cap-rec10" role="menuitem" class="menu-item flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+          Record 10s
+        </button>
+        <div class="-mx-1 my-1 h-px bg-border"></div>
+        <a href="/captures" role="menuitem" class="menu-item flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5L9 20"/></svg>
+          View captures
+        </a>
+        <button type="button" id="cap-stop" role="menuitem" class="menu-item hidden w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-muted-foreground outline-none hover:bg-accent hover:text-accent-foreground">
+          <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          Stop screen sharing
+        </button>
+        <p id="cap-status" class="hidden px-2 pt-1 text-xs"></p>
       </div>
     </div>
 
@@ -461,9 +495,22 @@ const groups = [
       </ul>
     </div>
   </div>
+
+  <!-- Recording badge -->
+  <div id="rec-badge" class="fixed bottom-4 left-1/2 z-[60] hidden -translate-x-1/2 items-center gap-2 rounded-full bg-destructive px-4 py-2 text-sm font-semibold text-white shadow-lg">
+    <span class="size-2.5 animate-pulse rounded-full bg-white"></span>
+    <span id="rec-text">Recording…</span>
+  </div>
 </div>
 
+<!-- Annotation editor (shared) -->
+<CaptureEditor />
+
 <script>
+  import { screenshot, record, isSupported, isSharing, stopSharing } from '../lib/capture-media';
+  import { mountEditor } from '../lib/capture-editor';
+  import type { Capture } from '../lib/captures-db';
+
   // ---------- state ----------
   type Device = { id: string; name: string; w: number; h: number; type: string; rotated: boolean };
   type Layout = 'row' | 'grid';
@@ -1112,6 +1159,7 @@ const groups = [
     { btn: $('account-btn'), menu: accountMenu },
     { btn: $('theme-btn'), menu: $('theme-menu') },
     { btn: $('workspace-btn'), menu: $('workspace-menu') },
+    { btn: $('capture-btn'), menu: $('capture-menu') },
   ];
   const isOpen = (m: HTMLElement) => m.style.display === 'block';
   function setMenu(menu: HTMLElement, btn: HTMLElement, open: boolean) {
@@ -1361,6 +1409,77 @@ const groups = [
       wsFile.value = '';
     }
   });
+
+  // ---------- screen capture (screenshot + record) ----------
+  const openEditor = mountEditor();
+  const canvasEl = $('canvas');
+  const capStop = $('cap-stop');
+  const recBadge = $('rec-badge');
+  const recText = $('rec-text');
+  const hostOf = (u: string) => { try { return new URL(u).hostname; } catch { return ''; } };
+
+  let capStatusTimer = 0;
+  function capStatus(msg: string, isError = false) {
+    const el = $('cap-status');
+    el.textContent = msg;
+    el.className = `px-2 pt-1 text-xs ${isError ? 'text-destructive' : 'text-muted-foreground'}`;
+    el.style.display = 'block';
+    clearTimeout(capStatusTimer);
+    capStatusTimer = window.setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+  const syncSharing = () => { capStop.style.display = isSharing() ? 'flex' : 'none'; };
+
+  function baseCapture(type: 'screenshot' | 'video', blob: Blob, thumb: Blob | null, width: number, height: number, durationMs: number): Capture {
+    return {
+      id: crypto.randomUUID(),
+      type, blob, thumb, mime: blob.type,
+      url: currentUrl, host: hostOf(currentUrl),
+      title: '', description: '', notes: '', annotations: [],
+      durationMs, width, height, createdAt: Date.now(),
+    };
+  }
+
+  if (!isSupported()) {
+    ['cap-shot', 'cap-rec5', 'cap-rec10'].forEach((id) => {
+      const b = $<HTMLButtonElement>(id);
+      b.disabled = true;
+      b.classList.add('opacity-50', 'cursor-not-allowed');
+    });
+  }
+
+  async function doScreenshot() {
+    closeAllMenus();
+    try {
+      const { blob, width, height } = await screenshot(canvasEl);
+      syncSharing();
+      openEditor(baseCapture('screenshot', blob, blob, width, height, 0));
+    } catch {
+      capStatus('Capture cancelled or blocked.', true);
+    }
+  }
+
+  async function doRecord(seconds: number) {
+    closeAllMenus();
+    recText.textContent = `Recording… ${seconds}s`;
+    recBadge.style.display = 'flex';
+    try {
+      const { blob, thumb, width, height, durationMs } = await record(seconds * 1000, (rem) => {
+        recText.textContent = `Recording… ${Math.ceil(rem / 1000)}s`;
+      });
+      recBadge.style.display = 'none';
+      syncSharing();
+      openEditor(baseCapture('video', blob, thumb, width, height, durationMs));
+    } catch {
+      recBadge.style.display = 'none';
+      capStatus('Recording cancelled or blocked.', true);
+    }
+  }
+
+  $('cap-shot').addEventListener('click', doScreenshot);
+  $('cap-rec5').addEventListener('click', () => doRecord(5));
+  $('cap-rec10').addEventListener('click', () => doRecord(10));
+  capStop.addEventListener('click', () => { stopSharing(); syncSharing(); closeAllMenus(); });
+  syncSharing();
 
   // ---------- keyboard shortcuts modal ----------
   $('shortcuts-item').addEventListener('click', () => {
