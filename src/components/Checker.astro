@@ -41,7 +41,7 @@ const groups = [
   <!-- ===== Toolbar ===== -->
   <header class="z-40 flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur">
     <!-- Sidebar toggle (mobile) -->
-    <button type="button" id="sidebar-toggle" class="grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Toggle device panel" title="Toggle device panel">
+    <button type="button" id="sidebar-toggle" class="tip grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Toggle device panel" data-tip="Toggle device panel" data-tip-align="start">
       <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
     </button>
 
@@ -65,7 +65,7 @@ const groups = [
           placeholder="Enter URL — e.g. example.com"
           class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
-        <button type="button" id="clear-btn" class="hidden shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Clear URL">
+        <button type="button" id="clear-btn" class="tip hidden shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Clear URL" data-tip="Clear URL">
           <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </div>
@@ -77,32 +77,43 @@ const groups = [
 
     <div class="mx-1 hidden h-6 w-px shrink-0 bg-border sm:block"></div>
 
+    <!-- Add screen -->
+    <button type="button" id="add-screen" class="tip flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:px-3" aria-label="Add custom screen" data-tip="Add custom screen">
+      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="hidden md:inline">Add Screen</span>
+    </button>
+
     <!-- Layout toggle -->
     <div class="hidden shrink-0 items-center rounded-md border border-border bg-card p-0.5 sm:flex" role="group" aria-label="Canvas layout">
-      <button type="button" data-layout="row" class="layout-btn grid size-8 place-items-center rounded-[5px] text-muted-foreground data-[on=true]:bg-muted data-[on=true]:text-foreground hover:text-foreground" title="Horizontal strip (scroll sideways)" aria-label="Horizontal layout">
+      <button type="button" data-layout="row" class="tip layout-btn grid size-8 place-items-center rounded-[5px] text-muted-foreground data-[on=true]:bg-muted data-[on=true]:text-foreground hover:text-foreground" data-tip="Horizontal strip" aria-label="Horizontal layout">
         <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="5" height="12" rx="1"/><rect x="9.5" y="6" width="5" height="12" rx="1"/><rect x="17" y="6" width="5" height="12" rx="1"/></svg>
       </button>
-      <button type="button" data-layout="grid" class="layout-btn grid size-8 place-items-center rounded-[5px] text-muted-foreground data-[on=true]:bg-muted data-[on=true]:text-foreground hover:text-foreground" title="Grid (wrap and scroll down)" aria-label="Grid layout">
+      <button type="button" data-layout="grid" class="tip layout-btn grid size-8 place-items-center rounded-[5px] text-muted-foreground data-[on=true]:bg-muted data-[on=true]:text-foreground hover:text-foreground" data-tip="Grid layout" aria-label="Grid layout">
         <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
       </button>
     </div>
 
+    <!-- Device frame toggle -->
+    <button type="button" id="frame-toggle" class="tip grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[on=true]:border-primary data-[on=true]:bg-primary/10 data-[on=true]:text-primary" data-on="true" aria-label="Toggle device frames" aria-pressed="true" data-tip="Toggle device frames">
+      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M10 19h4"/></svg>
+    </button>
+
     <!-- Zoom -->
     <div class="flex h-9 shrink-0 items-center rounded-md border border-border bg-card p-0.5">
-      <button type="button" data-zoom-step="-1" class="grid size-8 place-items-center rounded-[5px] text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Zoom out">
+      <button type="button" data-zoom-step="-1" class="tip grid size-8 place-items-center rounded-[5px] text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Zoom out" data-tip="Zoom out">
         <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>
       </button>
-      <button type="button" id="zoom-label" class="w-12 rounded-[5px] py-1.5 text-center text-xs font-semibold tabular-nums hover:bg-muted" title="Reset to fit">Fit</button>
-      <button type="button" data-zoom-step="1" class="grid size-8 place-items-center rounded-[5px] text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Zoom in">
+      <button type="button" id="zoom-label" class="tip w-12 rounded-[5px] py-1.5 text-center text-xs font-semibold tabular-nums hover:bg-muted" data-tip="Reset to fit">Fit</button>
+      <button type="button" data-zoom-step="1" class="tip grid size-8 place-items-center rounded-[5px] text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Zoom in" data-tip="Zoom in">
         <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </div>
 
     <!-- Rotate / reload all -->
-    <button type="button" id="rotate-all" class="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Rotate all devices" title="Rotate all">
+    <button type="button" id="rotate-all" class="tip grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Rotate all devices" data-tip="Rotate all">
       <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
     </button>
-    <button type="button" id="reload-all" class="hidden size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:grid" aria-label="Reload all devices" title="Reload all">
+    <button type="button" id="reload-all" class="tip hidden size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:grid" aria-label="Reload all devices" data-tip="Reload all">
       <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
     </button>
 
@@ -110,9 +121,10 @@ const groups = [
     <button
       type="button"
       id="theme-toggle"
-      class="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      class="tip grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       aria-label="Toggle light/dark mode"
-      title="Toggle theme"
+      data-tip="Toggle theme"
+      data-tip-align="end"
     >
       <!-- Sun (shown in dark mode) -->
       <svg id="icon-sun" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -170,17 +182,13 @@ const groups = [
           </div>
         ))}
 
-        <!-- Custom size -->
-        <div class="mt-4 border-t border-border/60 px-2 pt-4">
-          <p class="px-0.5 pb-2 text-xs font-medium text-muted-foreground">Custom viewport</p>
-          <form id="custom-form" class="flex items-center gap-1.5">
-            <input id="custom-w" type="number" min="200" max="3840" placeholder="W" aria-label="Custom width" class="h-8 w-full min-w-0 rounded-md border border-border bg-card px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-ring/50" />
-            <span class="shrink-0 text-xs text-muted-foreground">×</span>
-            <input id="custom-h" type="number" min="200" max="3840" placeholder="H" aria-label="Custom height" class="h-8 w-full min-w-0 rounded-md border border-border bg-card px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-ring/50" />
-            <button type="submit" class="grid size-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground" aria-label="Add custom viewport">
-              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            </button>
-          </form>
+        <!-- Custom screens (populated dynamically) -->
+        <div id="custom-group" class="mt-3 hidden">
+          <p class="flex items-center gap-2 px-2 pb-1.5 text-xs font-medium text-muted-foreground">
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>
+            Custom
+          </p>
+          <ul id="custom-list"></ul>
         </div>
       </div>
 
@@ -216,6 +224,54 @@ const groups = [
       <div id="frames" class="hidden"></div>
     </div>
   </div>
+
+  <!-- ===== Add Screen modal ===== -->
+  <div id="screen-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="screen-modal-title">
+    <div id="screen-modal-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background p-6 shadow-xl">
+      <button type="button" id="screen-modal-close" class="absolute right-4 top-4 grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Close">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 id="screen-modal-title" class="text-lg font-semibold tracking-tight">Add custom screen</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Name it and set a viewport size — it'll be added to the sidebar.</p>
+      <form id="screen-form" class="mt-5 space-y-4">
+        <div class="space-y-1.5">
+          <label for="screen-name" class="text-sm font-medium">Name</label>
+          <input id="screen-name" type="text" placeholder="e.g. My Laptop" autocomplete="off" spellcheck="false" class="h-9 w-full rounded-md border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1.5">
+            <label for="screen-w" class="text-sm font-medium">Width</label>
+            <input id="screen-w" type="number" min="200" max="3840" placeholder="1280" class="h-9 w-full rounded-md border border-border bg-card px-3 text-sm tabular-nums outline-none focus:ring-2 focus:ring-ring/50" />
+          </div>
+          <div class="space-y-1.5">
+            <label for="screen-h" class="text-sm font-medium">Height</label>
+            <input id="screen-h" type="number" min="200" max="3840" placeholder="800" class="h-9 w-full rounded-md border border-border bg-card px-3 text-sm tabular-nums outline-none focus:ring-2 focus:ring-ring/50" />
+          </div>
+        </div>
+        <p id="screen-error" class="hidden text-xs font-medium text-destructive">Enter a width and height between 200 and 3840.</p>
+        <div class="mt-2 flex justify-end gap-2">
+          <button type="button" id="screen-cancel" class="h-9 rounded-md border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted">Cancel</button>
+          <button type="submit" class="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03]">Add Screen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Delete confirmation modal ===== -->
+  <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div id="delete-modal-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background p-6 shadow-xl">
+      <h2 id="delete-modal-title" class="text-lg font-semibold tracking-tight">Delete screen?</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        <span id="delete-modal-name" class="font-medium text-foreground"></span> will be removed from the sidebar and canvas. This can't be undone.
+      </p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" id="delete-cancel" class="h-9 rounded-md border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted">Cancel</button>
+        <button type="button" id="delete-confirm" class="h-9 rounded-md bg-destructive px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.03]">Delete</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -226,8 +282,10 @@ const groups = [
   let currentUrl = '';
   let zoom: number | 'fit' = 'fit';
   let layout: Layout = 'row';
+  let framesOn = true;
   let customCount = 0;
   const active = new Map<string, Device>();
+  const customScreens = new Map<string, Device>(); // user-defined screen definitions
 
   // ---------- elements ----------
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -248,7 +306,9 @@ const groups = [
         localStorage.setItem('vp-state', JSON.stringify({
           layout,
           zoom,
+          framesOn,
           devices: [...active.values()],
+          customScreens: [...customScreens.values()],
         }));
       } catch { /* private mode etc. */ }
     },
@@ -256,7 +316,7 @@ const groups = [
       try {
         const raw = localStorage.getItem('vp-state');
         if (!raw) return null;
-        return JSON.parse(raw) as { layout: Layout; zoom: number | 'fit'; devices: Device[] };
+        return JSON.parse(raw) as { layout: Layout; zoom: number | 'fit'; framesOn?: boolean; devices: Device[]; customScreens?: Device[] };
       } catch {
         return null;
       }
@@ -264,15 +324,24 @@ const groups = [
   };
 
   // ---------- init devices ----------
+  const trackCustomCount = (id: string) => {
+    if (id.startsWith('custom-')) customCount = Math.max(customCount, Number(id.split('-')[1]) || 0);
+  };
   const saved = store.load();
+  if (saved) {
+    layout = saved.layout === 'grid' ? 'grid' : 'row';
+    zoom = saved.zoom === 'fit' || typeof saved.zoom === 'number' ? saved.zoom : 'fit';
+    framesOn = saved.framesOn !== false;
+    saved.customScreens?.forEach((d) => { customScreens.set(d.id, d); trackCustomCount(d.id); });
+  }
   if (saved?.devices?.length) {
     saved.devices.forEach((d) => {
       active.set(d.id, d);
-      if (d.id.startsWith('custom-')) customCount = Math.max(customCount, Number(d.id.split('-')[1]) || 0);
+      trackCustomCount(d.id);
+      // migrate older saves where custom devices weren't tracked separately
+      if (d.id.startsWith('custom-') && !customScreens.has(d.id)) customScreens.set(d.id, { ...d, rotated: false });
     });
-    layout = saved.layout === 'grid' ? 'grid' : 'row';
-    zoom = saved.zoom === 'fit' || typeof saved.zoom === 'number' ? saved.zoom : 'fit';
-  } else {
+  } else if (!saved) {
     document.querySelectorAll<HTMLButtonElement>('.device-row[data-on="true"]').forEach((row) => {
       active.set(row.dataset.id!, {
         id: row.dataset.id!,
@@ -284,7 +353,7 @@ const groups = [
       });
     });
   }
-  // sync sidebar checkmarks with state
+  // sync built-in sidebar checkmarks with state (custom rows are built later)
   document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) => {
     row.dataset.on = String(active.has(row.dataset.id!));
   });
@@ -355,7 +424,10 @@ const groups = [
     `;
 
     let skin: string;
-    if (d.type === 'phone') {
+    if (!framesOn) {
+      // bare screen — no device chrome
+      skin = `<div class="overflow-hidden rounded-md border border-border/70 shadow-lg">${screen}</div>`;
+    } else if (d.type === 'phone') {
       skin = `
         <div class="rounded-[2rem] border border-border/70 bg-neutral-950 p-2 ${d.rotated ? 'pl-5' : 'pt-5'} shadow-2xl dark:bg-black">
           ${d.rotated
@@ -388,7 +460,7 @@ const groups = [
     }
 
     el.innerHTML = `
-      <div class="mb-2 flex items-center justify-between gap-2 px-0.5" style="width:${sw + (d.type === 'desktop' ? 2 : 20)}px">
+      <div class="mb-2 flex items-center justify-between gap-2 px-0.5" style="width:${sw + (!framesOn || d.type === 'desktop' ? 2 : 20)}px">
         <div class="min-w-0">
           <p class="truncate text-sm font-semibold">${name}</p>
           <p class="text-xs tabular-nums text-muted-foreground">${w} × ${h} · ${Math.round(s * 100)}%</p>
@@ -511,37 +583,155 @@ const groups = [
     })
   );
 
-  // sidebar device rows
-  document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) => {
-    row.addEventListener('click', () => {
-      const id = row.dataset.id!;
-      if (active.has(id)) {
-        removeDevice(id);
-      } else {
-        addDevice({
-          id,
-          name: row.dataset.name!,
-          w: Number(row.dataset.w),
-          h: Number(row.dataset.h),
-          type: row.dataset.type!,
-          rotated: false,
-        });
-      }
-    });
-  });
+  // toggle a device on/off from its sidebar row (built-in or custom)
+  function toggleRow(row: HTMLElement) {
+    const id = row.dataset.id!;
+    if (active.has(id)) {
+      removeDevice(id);
+    } else {
+      addDevice({
+        id,
+        name: row.dataset.name!,
+        w: Number(row.dataset.w),
+        h: Number(row.dataset.h),
+        type: row.dataset.type!,
+        rotated: false,
+      });
+    }
+  }
 
-  // custom viewport
-  ($('custom-form') as unknown as HTMLFormElement).addEventListener('submit', (e) => {
-    e.preventDefault();
-    const wEl = $<HTMLInputElement>('custom-w');
-    const hEl = $<HTMLInputElement>('custom-h');
-    const w = Number(wEl.value);
-    const h = Number(hEl.value);
-    if (!w || !h || w < 200 || h < 200) return;
+  // sidebar device rows (built-in)
+  document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) =>
+    row.addEventListener('click', () => toggleRow(row))
+  );
+
+  // ---------- custom screens ----------
+  const customList = $('custom-list');
+  const customGroup = $('custom-group');
+
+  const typeForWidth = (w: number) => (w <= 500 ? 'phone' : w <= 1100 ? 'tablet' : 'desktop');
+
+  function syncCustomGroup() {
+    customGroup.style.display = customScreens.size ? 'block' : 'none';
+  }
+
+  // Build + insert a sidebar row for a custom screen definition.
+  function insertCustomRow(d: Device) {
+    const name = escapeHtml(d.name);
+    const li = document.createElement('li');
+    li.dataset.customId = d.id;
+    li.innerHTML = `
+      <div class="device-row group flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-muted"
+        role="button" tabindex="0"
+        data-id="${d.id}" data-name="${name}" data-w="${d.w}" data-h="${d.h}" data-type="${d.type}" data-on="${String(active.has(d.id))}">
+        <span class="grid size-4 shrink-0 place-items-center rounded border border-border transition-colors group-data-[on=true]:border-primary group-data-[on=true]:bg-primary">
+          <svg class="size-3 text-primary-foreground opacity-0 transition-opacity group-data-[on=true]:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </span>
+        <span class="min-w-0 flex-1 truncate">${name}</span>
+        <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${d.w}×${d.h}</span>
+        <button type="button" class="custom-del grid size-5 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100" aria-label="Delete ${name}" title="Delete screen">
+          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+        </button>
+      </div>`;
+    const row = li.querySelector<HTMLElement>('.device-row')!;
+    const del = li.querySelector<HTMLButtonElement>('.custom-del')!;
+    row.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('.custom-del')) return;
+      toggleRow(row);
+    });
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRow(row); }
+    });
+    del.addEventListener('click', (e) => { e.stopPropagation(); promptDeleteScreen(d.id); });
+    customList.appendChild(li);
+    syncCustomGroup();
+  }
+
+  function deleteCustomScreen(id: string) {
+    if (active.has(id)) removeDevice(id);
+    customScreens.delete(id);
+    customList.querySelector(`li[data-custom-id="${id}"]`)?.remove();
+    syncCustomGroup();
+    store.save();
+  }
+
+  function addCustomScreen(name: string, w: number, h: number) {
     customCount += 1;
-    addDevice({ id: `custom-${customCount}`, name: `Custom ${w}×${h}`, w, h, type: 'desktop', rotated: false });
+    const d: Device = {
+      id: `custom-${customCount}`,
+      name: name.trim() || `Custom ${w}×${h}`,
+      w, h,
+      type: typeForWidth(w),
+      rotated: false,
+    };
+    customScreens.set(d.id, d);
+    insertCustomRow(d);
+    addDevice(d); // activate + render + persist
+  }
+
+  // ---------- Add Screen modal ----------
+  const modal = $('screen-modal');
+  const nameEl = $<HTMLInputElement>('screen-name');
+  const wEl = $<HTMLInputElement>('screen-w');
+  const hEl = $<HTMLInputElement>('screen-h');
+  const errEl = $('screen-error');
+
+  function openModal() {
+    nameEl.value = '';
     wEl.value = '';
     hEl.value = '';
+    errEl.style.display = 'none';
+    modal.style.display = 'flex';
+    setTimeout(() => nameEl.focus(), 0);
+  }
+  function closeModal() {
+    modal.style.display = 'none';
+  }
+
+  $('add-screen').addEventListener('click', openModal);
+  $('screen-cancel').addEventListener('click', closeModal);
+  $('screen-modal-close').addEventListener('click', closeModal);
+  $('screen-modal-overlay').addEventListener('click', closeModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+  });
+
+  ($('screen-form') as unknown as HTMLFormElement).addEventListener('submit', (e) => {
+    e.preventDefault();
+    const w = Number(wEl.value);
+    const h = Number(hEl.value);
+    if (!w || !h || w < 200 || w > 3840 || h < 200 || h > 3840) {
+      errEl.style.display = 'block';
+      return;
+    }
+    addCustomScreen(nameEl.value, w, h);
+    closeModal();
+  });
+
+  // ---------- Delete confirmation modal ----------
+  const deleteModal = $('delete-modal');
+  const deleteNameEl = $('delete-modal-name');
+  let pendingDeleteId: string | null = null;
+
+  function promptDeleteScreen(id: string) {
+    pendingDeleteId = id;
+    deleteNameEl.textContent = customScreens.get(id)?.name ?? 'This screen';
+    deleteModal.style.display = 'flex';
+    setTimeout(() => $('delete-cancel').focus(), 0);
+  }
+  function closeDeleteModal() {
+    deleteModal.style.display = 'none';
+    pendingDeleteId = null;
+  }
+
+  $('delete-cancel').addEventListener('click', closeDeleteModal);
+  $('delete-modal-overlay').addEventListener('click', closeDeleteModal);
+  $('delete-confirm').addEventListener('click', () => {
+    if (pendingDeleteId) deleteCustomScreen(pendingDeleteId);
+    closeDeleteModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && deleteModal.style.display === 'flex') closeDeleteModal();
   });
 
   // layout
@@ -571,6 +761,19 @@ const groups = [
       setZoom(next);
     })
   );
+
+  // device frame toggle
+  const frameToggle = $('frame-toggle');
+  function syncFrameToggle() {
+    frameToggle.dataset.on = String(framesOn);
+    frameToggle.setAttribute('aria-pressed', String(framesOn));
+  }
+  frameToggle.addEventListener('click', () => {
+    framesOn = !framesOn;
+    syncFrameToggle();
+    store.save();
+    renderAll();
+  });
 
   // rotate / reload all
   $('rotate-all').addEventListener('click', () => {
@@ -607,6 +810,8 @@ const groups = [
 
   // init UI state
   applyLayout();
+  syncFrameToggle();
+  customScreens.forEach((d) => insertCustomRow(d)); // rebuild saved custom screens
   zoomLabel.textContent = zoom === 'fit' ? 'Fit' : `${Math.round((zoom as number) * 100)}%`;
   updateCount();
 
@@ -635,3 +840,77 @@ const groups = [
     form.requestSubmit();
   }
 </script>
+
+<style>
+  /* shadcn-style tooltip (new-york-v4 look) — dependency-free, attribute-driven.
+     Usage: add class `tip` + `data-tip="text"` to any element. Optional
+     `data-tip-align="start|end"` keeps edge triggers from clipping the viewport. */
+  .tip {
+    position: relative;
+  }
+  .tip::before,
+  .tip::after {
+    position: absolute;
+    left: 50%;
+    z-index: 60;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease, transform 120ms ease;
+  }
+  /* bubble */
+  .tip::after {
+    content: attr(data-tip);
+    top: calc(100% + 7px);
+    transform: translate(-50%, -3px) scale(0.96);
+    transform-origin: top center;
+    white-space: nowrap;
+    border-radius: calc(var(--radius) - 2px);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    box-shadow: 0 8px 20px -6px rgb(0 0 0 / 0.3);
+  }
+  /* arrow */
+  .tip::before {
+    content: "";
+    top: calc(100% + 3px);
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--primary);
+    border-radius: 2px;
+    transform: translate(-50%, -3px) rotate(45deg);
+  }
+  .tip:hover::after,
+  .tip:focus-visible::after {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  .tip:hover::before,
+  .tip:focus-visible::before {
+    opacity: 1;
+    transform: translate(-50%, 0) rotate(45deg);
+  }
+  /* edge-aligned bubbles (arrow stays over the trigger center) */
+  .tip[data-tip-align="start"]::after {
+    left: 0;
+    transform: translate(0, -3px) scale(0.96);
+    transform-origin: top left;
+  }
+  .tip[data-tip-align="start"]:hover::after,
+  .tip[data-tip-align="start"]:focus-visible::after {
+    transform: translate(0, 0) scale(1);
+  }
+  .tip[data-tip-align="end"]::after {
+    left: auto;
+    right: 0;
+    transform: translate(0, -3px) scale(0.96);
+    transform-origin: top right;
+  }
+  .tip[data-tip-align="end"]:hover::after,
+  .tip[data-tip-align="end"]:focus-visible::after {
+    transform: translate(0, 0) scale(1);
+  }
+</style>

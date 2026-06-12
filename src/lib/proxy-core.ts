@@ -43,6 +43,38 @@ const inflight = new Map<string, Promise<ProxyEntry>>();
 
 const enc = (s: string) => new TextEncoder().encode(s);
 
+const injectedScrollbarStyle = `<style data-viewport-scrollbar>
+  html[data-viewport-proxy-scrollbars],
+  html[data-viewport-proxy-scrollbars] body,
+  html[data-viewport-proxy-scrollbars] * {
+    scrollbar-width: thin !important;
+    scrollbar-color: rgb(113 113 122 / 0.8) transparent !important;
+  }
+  html[data-viewport-proxy-scrollbars]::-webkit-scrollbar,
+  html[data-viewport-proxy-scrollbars] body::-webkit-scrollbar,
+  html[data-viewport-proxy-scrollbars] *::-webkit-scrollbar {
+    width: 6px !important;
+    height: 6px !important;
+  }
+  html[data-viewport-proxy-scrollbars]::-webkit-scrollbar-track,
+  html[data-viewport-proxy-scrollbars] body::-webkit-scrollbar-track,
+  html[data-viewport-proxy-scrollbars] *::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+  html[data-viewport-proxy-scrollbars]::-webkit-scrollbar-thumb,
+  html[data-viewport-proxy-scrollbars] body::-webkit-scrollbar-thumb,
+  html[data-viewport-proxy-scrollbars] *::-webkit-scrollbar-thumb {
+    background: rgb(113 113 122 / 0.8) !important;
+    border-radius: 999px !important;
+    border: 0 !important;
+  }
+  html[data-viewport-proxy-scrollbars]::-webkit-scrollbar-thumb:hover,
+  html[data-viewport-proxy-scrollbars] body::-webkit-scrollbar-thumb:hover,
+  html[data-viewport-proxy-scrollbars] *::-webkit-scrollbar-thumb:hover {
+    background: rgb(82 82 91 / 0.95) !important;
+  }
+</style>`;
+
 /** Map a same-origin absolute URL to a path-mirroring proxy URL. */
 function proxied(abs: string): string {
   try {
@@ -97,13 +129,19 @@ function rewriteHtml(html: string, base: string): string {
   html = html.replace(/<base\b[^>]*>/gi, '');
   html = html.replace(/\s+integrity\s*=\s*("|')[^"']*\1/gi, '');
   html = html.replace(/\s+crossorigin(\s*=\s*("|')[^"']*\2)?/gi, '');
+  html = html.replace(/<html\b(?![^>]*\bdata-viewport-proxy-scrollbars\b)([^>]*)>/i, '<html data-viewport-proxy-scrollbars$1>');
 
   // Force a full-URL referer so JS-created subresources carry __vphost.
   html = html.replace(/<meta[^>]+name=["']?referrer["']?[^>]*>/gi, '');
   const referrerMeta = '<meta name="referrer" content="unsafe-url">';
-  html = /<head[^>]*>/i.test(html)
-    ? html.replace(/<head[^>]*>/i, (m) => m + referrerMeta)
-    : referrerMeta + html;
+  if (/<head[^>]*>/i.test(html)) {
+    html = html.replace(/<head[^>]*>/i, (m) => m + referrerMeta);
+    html = /<\/head>/i.test(html)
+      ? html.replace(/<\/head>/i, injectedScrollbarStyle + '</head>')
+      : html + injectedScrollbarStyle;
+  } else {
+    html = referrerMeta + injectedScrollbarStyle + html;
+  }
 
   // srcset: rewrite each candidate URL, preserve descriptors.
   html = html.replace(/\bsrcset\s*=\s*("|')([^"']*)\1/gi, (_m, q, val) => {
