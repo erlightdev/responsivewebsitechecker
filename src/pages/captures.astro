@@ -57,6 +57,7 @@ import CaptureEditor from '../components/CaptureEditor.astro';
 <script>
   import { allCaptures, deleteCapture, type Capture } from '../lib/captures-db';
   import { mountEditor } from '../lib/capture-editor';
+  import { toast } from '../lib/toast';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const grid = $('grid');
@@ -78,6 +79,7 @@ import CaptureEditor from '../components/CaptureEditor.astro';
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    toast.success('Download started', { description: `${base}.${ext}`, log: 'Capture downloaded' });
   }
 
   async function render() {
@@ -119,7 +121,10 @@ import CaptureEditor from '../components/CaptureEditor.astro';
           </div>
         </div>`;
 
-      const openIt = () => openEditor(c, render);
+      const openIt = () => openEditor(c, (saved) => {
+        toast.success('Capture updated', { description: saved.title || saved.host || 'Saved', log: 'Capture updated' });
+        render();
+      });
       card.querySelector<HTMLButtonElement>('.open')!.addEventListener('click', openIt);
       card.querySelector<HTMLButtonElement>('.edit')!.addEventListener('click', openIt);
       card.querySelector<HTMLButtonElement>('.dl')!.addEventListener('click', () => download(c));
@@ -143,6 +148,7 @@ import CaptureEditor from '../components/CaptureEditor.astro';
     await deleteCapture(delId);
     closeDelete();
     render();
+    toast.success('Capture deleted', { log: 'Capture deleted' });
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && delModal.style.display === 'flex') closeDelete(); });
 

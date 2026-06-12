@@ -516,6 +516,7 @@ const groups = [
   import { screenshot, record, isSupported, isSharing, stopSharing } from '../lib/capture-media';
   import { mountEditor } from '../lib/capture-editor';
   import type { Capture } from '../lib/captures-db';
+  import { toast } from '../lib/toast';
 
   // ---------- state ----------
   type Device = { id: string; name: string; w: number; h: number; type: string; rotated: boolean };
@@ -1047,11 +1048,13 @@ const groups = [
   }
 
   function deleteCustomScreen(id: string) {
+    const name = customScreens.get(id)?.name ?? 'Screen';
     if (active.has(id)) removeDevice(id);
     customScreens.delete(id);
     customList.querySelector(`li[data-custom-id="${id}"]`)?.remove();
     syncCustomGroup();
     store.save();
+    toast.success('Screen deleted', { description: name, log: 'Screen deleted' });
   }
 
   function addCustomScreen(name: string, w: number, h: number) {
@@ -1066,6 +1069,7 @@ const groups = [
     customScreens.set(d.id, d);
     insertCustomRow(d);
     addDevice(d); // activate + render + persist
+    toast.success('Screen added', { description: `${d.name} · ${d.w}×${d.h}`, log: 'Screen added' });
   }
 
   // ---------- Add Screen modal ----------
@@ -1186,11 +1190,16 @@ const groups = [
   // upstream fetch, keeping device/zoom/rotation state untouched. One shared
   // token means the proxy de-dupes to a single upstream hit per URL.
   $('clear-cache').addEventListener('click', () => {
-    if (!currentUrl) return;
+    if (!currentUrl) {
+      toast.warning('Nothing to reload', { description: 'Load a URL first.', log: false });
+      return;
+    }
     const token = Date.now();
-    frames.querySelectorAll<HTMLElement>('[data-frame-id]').forEach((el) =>
+    const panes = frames.querySelectorAll<HTMLElement>('[data-frame-id]');
+    panes.forEach((el) =>
       (el as unknown as { __reload?: (bust?: number) => void }).__reload?.(token)
     );
+    toast.info('Cache cleared', { description: `Reloaded ${panes.length} screen${panes.length === 1 ? '' : 's'}.`, log: 'Cache cleared' });
   });
 
   // live reorder while dragging a pane over the canvas
@@ -1398,12 +1407,14 @@ const groups = [
         localStorage.setItem(ACTIVE_WS_KEY, ws.id);
         renderWorkspaces();
         closeAllMenus();
+        toast.info('Workspace loaded', { description: ws.name, log: 'Workspace loaded' });
       });
       li.querySelector<HTMLButtonElement>('.ws-del')!.addEventListener('click', (e) => {
         e.stopPropagation();
         saveWorkspaces(loadWorkspaces().filter((w) => w.id !== ws.id));
         if (activeWsId() === ws.id) localStorage.removeItem(ACTIVE_WS_KEY);
         renderWorkspaces();
+        toast.success('Workspace deleted', { description: ws.name, log: 'Workspace deleted' });
       });
       wsList.appendChild(li);
     });
@@ -1439,6 +1450,7 @@ const groups = [
     localStorage.setItem(ACTIVE_WS_KEY, id);
     renderWorkspaces();
     closeWsModal();
+    toast.success('Workspace saved', { description: name, log: 'Workspace saved' });
   });
 
   renderWorkspaces();
@@ -1472,7 +1484,9 @@ const groups = [
     const payload = { app: 'viewport', kind: 'workspaces', version: 1, exportedAt: new Date().toISOString(), workspaces: list };
     const stamp = new Date().toISOString().slice(0, 10);
     downloadJSON(`viewport-workspaces-${stamp}.json`, JSON.stringify(payload, null, 2));
-    showWsStatus(`Exported ${list.length} workspace${list.length > 1 ? 's' : ''}.`, false);
+    const msg = `Exported ${list.length} workspace${list.length > 1 ? 's' : ''}.`;
+    showWsStatus(msg, false);
+    toast.success('Workspaces exported', { description: msg, log: 'Workspaces exported' });
   });
 
   const wsFile = $<HTMLInputElement>('ws-file');
@@ -1494,9 +1508,12 @@ const groups = [
       );
       saveWorkspaces(list);
       renderWorkspaces();
-      showWsStatus(`Imported ${valid.length} workspace${valid.length > 1 ? 's' : ''}.`, false);
+      const msg = `Imported ${valid.length} workspace${valid.length > 1 ? 's' : ''}.`;
+      showWsStatus(msg, false);
+      toast.success('Workspaces imported', { description: msg, log: 'Workspaces imported' });
     } catch {
       showWsStatus('Import failed — not a valid workspaces file.', true);
+      toast.error('Import failed', { description: 'Not a valid workspaces file.', log: 'Import failed' });
     } finally {
       wsFile.value = '';
     }
@@ -1521,6 +1538,11 @@ const groups = [
   }
   const syncSharing = () => { capStop.style.display = isSharing() ? 'flex' : 'none'; };
 
+  const onCaptureSaved = (c: Capture) => {
+    const label = c.type === 'video' ? 'Recording saved' : 'Screenshot saved';
+    toast.success(label, { description: c.title || c.host || 'Saved to Captures', log: label });
+  };
+
   function baseCapture(type: 'screenshot' | 'video', blob: Blob, thumb: Blob | null, width: number, height: number, durationMs: number): Capture {
     return {
       id: crypto.randomUUID(),
@@ -1544,9 +1566,10 @@ const groups = [
     try {
       const { blob, width, height } = await screenshot(canvasEl);
       syncSharing();
-      openEditor(baseCapture('screenshot', blob, blob, width, height, 0));
+      openEditor(baseCapture('screenshot', blob, blob, width, height, 0), onCaptureSaved);
     } catch {
       capStatus('Capture cancelled or blocked.', true);
+      toast.warning('Screenshot cancelled', { log: 'Screenshot cancelled' });
     }
   }
 
@@ -1560,10 +1583,11 @@ const groups = [
       });
       recBadge.style.display = 'none';
       syncSharing();
-      openEditor(baseCapture('video', blob, thumb, width, height, durationMs));
+      openEditor(baseCapture('video', blob, thumb, width, height, durationMs), onCaptureSaved);
     } catch {
       recBadge.style.display = 'none';
       capStatus('Recording cancelled or blocked.', true);
+      toast.warning('Recording cancelled', { log: 'Recording cancelled' });
     }
   }
 

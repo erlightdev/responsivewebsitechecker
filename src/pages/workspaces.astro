@@ -78,6 +78,8 @@ import Layout from '../layouts/Layout.astro';
 </Layout>
 
 <script>
+  import { toast } from '../lib/toast';
+
   type Device = { id: string; name: string; w: number; h: number; type: string; rotated: boolean };
   type VPState = { url?: string; layout?: string; zoom?: number | 'fit'; framesOn?: boolean; devices?: Device[]; customScreens?: Device[] };
   type Workspace = { id: string; name: string; state: VPState };
@@ -200,7 +202,7 @@ import Layout from '../layouts/Layout.astro';
     if (!name) return;
     const list = load();
     const ws = list.find((w) => w.id === renameId);
-    if (ws) { ws.name = name; save(list); render(); }
+    if (ws) { ws.name = name; save(list); render(); toast.success('Workspace renamed', { description: name, log: 'Workspace renamed' }); }
     closeRename();
   });
 
@@ -217,10 +219,12 @@ import Layout from '../layouts/Layout.astro';
   $('del-cancel').addEventListener('click', closeDelete);
   $('del-overlay').addEventListener('click', closeDelete);
   $('del-confirm').addEventListener('click', () => {
+    const name = load().find((w) => w.id === delId)?.name ?? 'Workspace';
     save(load().filter((w) => w.id !== delId));
     if (activeId() === delId) localStorage.removeItem(ACTIVE_WS_KEY);
     render();
     closeDelete();
+    toast.success('Workspace deleted', { description: name, log: 'Workspace deleted' });
   });
 
   document.addEventListener('keydown', (e) => {
@@ -241,7 +245,9 @@ import Layout from '../layouts/Layout.astro';
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    status(`Exported ${list.length} workspace${list.length === 1 ? '' : 's'}.`);
+    const msg = `Exported ${list.length} workspace${list.length === 1 ? '' : 's'}.`;
+    status(msg);
+    toast.success('Workspaces exported', { description: msg, log: 'Workspaces exported' });
   });
 
   const importFile = $<HTMLInputElement>('import-file');
@@ -259,9 +265,12 @@ import Layout from '../layouts/Layout.astro';
       valid.forEach((w: Workspace, i: number) => list.push({ id: `ws-${Date.now()}-${i}`, name: w.name, state: w.state }));
       save(list);
       render();
-      status(`Imported ${valid.length} workspace${valid.length === 1 ? '' : 's'}.`);
+      const msg = `Imported ${valid.length} workspace${valid.length === 1 ? '' : 's'}.`;
+      status(msg);
+      toast.success('Workspaces imported', { description: msg, log: 'Workspaces imported' });
     } catch {
       status('Import failed — not a valid workspaces file.', true);
+      toast.error('Import failed', { description: 'Not a valid workspaces file.', log: 'Import failed' });
     } finally {
       importFile.value = '';
     }
