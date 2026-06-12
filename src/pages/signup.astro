@@ -122,6 +122,11 @@ const anySocial = hasGithub || hasGoogle;
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const next = new URLSearchParams(location.search).get('next') || '/checker';
+  const withAuth = (url: string, flag: string) => {
+    const u = new URL(url, location.origin);
+    u.searchParams.set('auth', flag);
+    return u.pathname + u.search;
+  };
   const prefill = new URLSearchParams(location.search).get('email');
   if (prefill) ($('email') as HTMLInputElement).value = prefill;
 
@@ -231,19 +236,19 @@ const anySocial = hasGithub || hasGoogle;
       const data = await res.json().catch(() => ({}));
       return showError(data?.error || 'Could not set the password.');
     }
-    toast.success('Welcome to Viewport', { description: 'Password set', log: 'Password set' });
-    location.href = next;
+    toast.success('Password set', { log: 'Password set' });
+    location.href = withAuth(next, 'welcome');
   });
 
   $('skip-password').addEventListener('click', () => {
-    toast.success('Welcome to Viewport', { description: email, log: 'Account created' });
-    location.href = next;
+    location.href = withAuth(next, 'welcome');
   });
 
   // Social
   document.querySelectorAll<HTMLButtonElement>('[data-social]').forEach((b) =>
     b.addEventListener('click', () =>
-      signIn.social({ provider: b.dataset.social as 'github' | 'google', callbackURL: next })
+      // requestSignUp lets social create a new account from the signup page
+      signIn.social({ provider: b.dataset.social as 'github' | 'google', callbackURL: withAuth(next, 'welcome'), requestSignUp: true })
     )
   );
 </script>

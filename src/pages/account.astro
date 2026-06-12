@@ -78,6 +78,26 @@ const hasPassword = user
         <button type="button" id="delete-btn" class="mt-4 h-9 rounded-md bg-destructive px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.02]">Delete account</button>
       </section>
     </div>
+
+    <!-- Delete confirmation modal -->
+    <div id="delete-modal" class="fixed inset-0 z-100 hidden items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-labelledby="delete-title">
+      <div id="delete-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+      <div class="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background p-6 shadow-xl">
+        <div class="flex items-start gap-3">
+          <span class="grid size-10 shrink-0 place-items-center rounded-full bg-destructive/10 text-destructive">
+            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+          </span>
+          <div>
+            <h2 id="delete-title" class="text-lg font-semibold tracking-tight">Delete account?</h2>
+            <p class="mt-1 text-sm text-muted-foreground">This permanently removes your account and all data. This action can't be undone.</p>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-2">
+          <button type="button" id="delete-cancel" class="h-9 rounded-md border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted">Cancel</button>
+          <button type="button" id="delete-confirm" class="h-9 rounded-md bg-destructive px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.03] disabled:opacity-60">Delete account</button>
+        </div>
+      </div>
+    </div>
   </AccountShell>
 </Layout>
 
@@ -134,11 +154,31 @@ const hasPassword = user
     pwForm.reset();
   });
 
-  document.getElementById('delete-btn')?.addEventListener('click', async () => {
-    if (!confirm('Permanently delete your account? This cannot be undone.')) return;
+  // Delete account — confirmation modal
+  const delModal = document.getElementById('delete-modal') as HTMLElement;
+  const openDelete = () => { delModal.style.display = 'flex'; };
+  const closeDelete = () => { delModal.style.display = 'none'; };
+
+  document.getElementById('delete-btn')?.addEventListener('click', openDelete);
+  document.getElementById('delete-cancel')?.addEventListener('click', closeDelete);
+  document.getElementById('delete-overlay')?.addEventListener('click', closeDelete);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && delModal.style.display === 'flex') closeDelete(); });
+
+  document.getElementById('delete-confirm')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true;
     const { error } = await authClient.deleteUser();
-    if (error) return toast.error('Could not delete account', { description: error.message });
+    if (error) {
+      btn.disabled = false;
+      closeDelete();
+      return toast.error('Could not delete account', { description: error.message });
+    }
+    // clear local app state, then sign out and route to login with a toast
+    try {
+      Object.keys(localStorage).filter((k) => k.startsWith('vp-')).forEach((k) => localStorage.removeItem(k));
+    } catch { /* ignore */ }
     await signOut();
-    location.href = '/';
+    toast.success('Account deleted', { description: 'Your account and data were removed.', log: false });
+    setTimeout(() => (location.href = '/login'), 600);
   });
 </script>

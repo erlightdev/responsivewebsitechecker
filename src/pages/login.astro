@@ -126,11 +126,18 @@ const anySocial = hasGithub || hasGoogle;
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const params = new URLSearchParams(location.search);
   const next = params.get('next') || '/checker';
+  // append an ?auth= flag so the dashboard can show a welcome toast post-redirect
+  const withAuth = (url: string, flag: string) => {
+    const u = new URL(url, location.origin);
+    u.searchParams.set('auth', flag);
+    return u.pathname + u.search;
+  };
 
   const showError = (msg: string) => toast.error(msg);
   const clearError = () => {};
   if (params.get('error') === 'banned') toast.error('Account suspended', { description: 'Contact an administrator.', log: false });
   if (params.get('error') === 'restricted') toast.warning('Access restricted', { description: 'You do not have access to that area.', log: false });
+  if (params.get('error') === 'signup_disabled') toast.error('No account found', { description: 'No account is linked to that Google/GitHub login. Please sign up first.', log: false });
 
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const sections = { email: $('step-email'), password: $('step-password'), otp: $('step-otp') } as const;
@@ -219,8 +226,7 @@ const anySocial = hasGithub || hasGoogle;
     const { error } = await signIn.email({ email, password });
     btn.disabled = false;
     if (!error) {
-      toast.success('Signed in', { description: email, log: 'Signed in' });
-      location.href = next;
+      location.href = withAuth(next, 'login');
       return;
     }
     err.textContent = error.message || 'Incorrect email or password. Try OTP if you signed up passwordless.';
@@ -274,14 +280,20 @@ const anySocial = hasGithub || hasGoogle;
     const { error } = await signIn.emailOtp({ email, otp: code });
     btn.disabled = false;
     if (error) return showError(error.message || 'Invalid or expired code.');
-    toast.success('Signed in', { description: email, log: 'Signed in with code' });
-    location.href = next;
+    location.href = withAuth(next, 'login');
   });
 
   // --- Social ---
+  // No requestSignUp here: if the Google/GitHub account isn't registered, Better
+  // Auth redirects to errorCallbackURL with ?error=signup_disabled instead of
+  // silently creating an account.
   document.querySelectorAll<HTMLButtonElement>('[data-social]').forEach((b) =>
     b.addEventListener('click', () =>
-      signIn.social({ provider: b.dataset.social as 'github' | 'google', callbackURL: next })
+      signIn.social({
+        provider: b.dataset.social as 'github' | 'google',
+        callbackURL: withAuth(next, 'login'),
+        errorCallbackURL: '/login?error=signup_disabled',
+      })
     )
   );
 </script>

@@ -21,9 +21,16 @@ const githubSecret = import.meta.env.GITHUB_CLIENT_SECRET;
 const googleId = import.meta.env.GOOGLE_CLIENT_ID;
 const googleSecret = import.meta.env.GOOGLE_CLIENT_SECRET;
 
-const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {};
-if (githubId && githubSecret) socialProviders.github = { clientId: githubId, clientSecret: githubSecret };
-if (googleId && googleSecret) socialProviders.google = { clientId: googleId, clientSecret: googleSecret };
+// disableImplicitSignUp: a social *sign-in* won't create a new account unless the
+// caller explicitly passes requestSignUp:true (the signup page does; login doesn't).
+const socialProviders: Record<
+  string,
+  { clientId: string; clientSecret: string; disableImplicitSignUp: boolean }
+> = {};
+if (githubId && githubSecret)
+  socialProviders.github = { clientId: githubId, clientSecret: githubSecret, disableImplicitSignUp: true };
+if (googleId && googleSecret)
+  socialProviders.google = { clientId: googleId, clientSecret: googleSecret, disableImplicitSignUp: true };
 
 export const auth = betterAuth({
   baseURL: BASE_URL,
