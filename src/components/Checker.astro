@@ -1,0 +1,623 @@
+---
+// Device catalog, grouped Polypane-style. Panes are rendered client-side.
+const groups = [
+  {
+    label: 'Phones',
+    type: 'phone',
+    icon: 'M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3',
+    devices: [
+      { id: 'iphone-se', name: 'iPhone SE', w: 375, h: 667, on: true },
+      { id: 'iphone-15', name: 'iPhone 15 Pro', w: 393, h: 852, on: true },
+      { id: 'iphone-15-max', name: 'iPhone 15 Pro Max', w: 430, h: 932, on: false },
+      { id: 'pixel-8', name: 'Pixel 8', w: 412, h: 915, on: false },
+      { id: 'galaxy-s24', name: 'Galaxy S24', w: 360, h: 780, on: false },
+    ],
+  },
+  {
+    label: 'Tablets',
+    type: 'tablet',
+    icon: 'M10.5 19.5h3m-6.75 2.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-15a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 4.5v15a2.25 2.25 0 0 0 2.25 2.25Z',
+    devices: [
+      { id: 'ipad-mini', name: 'iPad Mini', w: 768, h: 1024, on: true },
+      { id: 'ipad-air', name: 'iPad Air', w: 820, h: 1180, on: false },
+      { id: 'ipad-pro', name: 'iPad Pro 12.9"', w: 1024, h: 1366, on: false },
+    ],
+  },
+  {
+    label: 'Laptops & Desktops',
+    type: 'desktop',
+    icon: 'M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25',
+    devices: [
+      { id: 'macbook-air', name: 'MacBook Air', w: 1280, h: 832, on: true },
+      { id: 'macbook-16', name: 'MacBook Pro 16"', w: 1536, h: 960, on: false },
+      { id: 'desktop', name: 'Desktop', w: 1440, h: 900, on: false },
+      { id: 'desktop-hd', name: 'Desktop HD', w: 1920, h: 1080, on: false },
+    ],
+  },
+];
+---
+
+<div class="flex h-dvh flex-col overflow-hidden">
+  <!-- ===== Toolbar ===== -->
+  <header class="z-40 flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur">
+    <!-- Sidebar toggle (mobile) -->
+    <button type="button" id="sidebar-toggle" class="grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Toggle device panel" title="Toggle device panel">
+      <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+    </button>
+
+    <a href="/" class="flex shrink-0 items-center gap-2 pr-1 font-semibold tracking-tight">
+      <span class="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </span>
+      <span class="hidden md:inline">Viewport</span>
+    </a>
+
+    <!-- URL form -->
+    <form id="url-form" class="flex min-w-0 flex-1 items-center gap-2">
+      <div class="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-card px-3 transition-shadow focus-within:ring-2 focus-within:ring-ring/50">
+        <svg class="size-4 shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <input
+          id="url-input"
+          type="text"
+          inputmode="url"
+          autocomplete="url"
+          spellcheck="false"
+          placeholder="Enter URL — e.g. example.com"
+          class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+        <button type="button" id="clear-btn" class="hidden shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Clear URL">
+          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <button type="submit" class="h-9 shrink-0 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:scale-[1.03]">
+        <span class="hidden sm:inline">Check</span>
+        <svg class="size-4 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+
+    <div class="mx-1 hidden h-6 w-px shrink-0 bg-border sm:block"></div>
+
+    <!-- Layout toggle -->
+    <div class="hidden shrink-0 items-center rounded-md border border-border bg-card p-0.5 sm:flex" role="group" aria-label="Canvas layout">
+      <button type="button" data-layout="row" class="layout-btn grid size-8 place-items-center rounded-[5px] text-muted-foreground data-[on=true]:bg-muted data-[on=true]:text-foreground hover:text-foreground" title="Horizontal strip (scroll sideways)" aria-label="Horizontal layout">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="5" height="12" rx="1"/><rect x="9.5" y="6" width="5" height="12" rx="1"/><rect x="17" y="6" width="5" height="12" rx="1"/></svg>
+      </button>
+      <button type="button" data-layout="grid" class="layout-btn grid size-8 place-items-center rounded-[5px] text-muted-foreground data-[on=true]:bg-muted data-[on=true]:text-foreground hover:text-foreground" title="Grid (wrap and scroll down)" aria-label="Grid layout">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+      </button>
+    </div>
+
+    <!-- Zoom -->
+    <div class="flex h-9 shrink-0 items-center rounded-md border border-border bg-card p-0.5">
+      <button type="button" data-zoom-step="-1" class="grid size-8 place-items-center rounded-[5px] text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Zoom out">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+      </button>
+      <button type="button" id="zoom-label" class="w-12 rounded-[5px] py-1.5 text-center text-xs font-semibold tabular-nums hover:bg-muted" title="Reset to fit">Fit</button>
+      <button type="button" data-zoom-step="1" class="grid size-8 place-items-center rounded-[5px] text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Zoom in">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+
+    <!-- Rotate / reload all -->
+    <button type="button" id="rotate-all" class="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Rotate all devices" title="Rotate all">
+      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+    </button>
+    <button type="button" id="reload-all" class="hidden size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:grid" aria-label="Reload all devices" title="Reload all">
+      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+    </button>
+
+    <!-- Theme toggle -->
+    <button
+      type="button"
+      id="theme-toggle"
+      class="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      aria-label="Toggle light/dark mode"
+      title="Toggle theme"
+    >
+      <!-- Sun (shown in dark mode) -->
+      <svg id="icon-sun" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+      </svg>
+      <!-- Moon (shown in light mode) -->
+      <svg id="icon-moon" class="size-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="relative flex min-h-0 flex-1 overflow-hidden">
+    <!-- ===== Sidebar ===== -->
+    <aside
+      id="sidebar"
+      class="absolute inset-y-0 left-0 z-30 flex w-72 -translate-x-full flex-col border-r border-border/60 bg-background transition-[transform,margin] duration-300 ease-in-out data-[open=true]:translate-x-0 lg:static lg:translate-x-0 data-[collapsed=true]:lg:-ml-72 data-[collapsed=true]:lg:-translate-x-full"
+      data-open="false"
+      data-collapsed="false"
+    >
+      <div class="flex items-center justify-between px-4 pb-2 pt-4">
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Devices</h2>
+        <span id="device-count" class="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold tabular-nums text-primary">0</span>
+      </div>
+
+      <div class="min-h-0 flex-1 overflow-y-auto px-2 pb-4 [scrollbar-width:thin]">
+        {groups.map((g) => (
+          <div class="mt-3 first:mt-1">
+            <p class="flex items-center gap-2 px-2 pb-1.5 text-xs font-medium text-muted-foreground">
+              <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={g.icon}/></svg>
+              {g.label}
+            </p>
+            <ul>
+              {g.devices.map((d) => (
+                <li>
+                  <button
+                    type="button"
+                    class="device-row group flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-muted"
+                    data-id={d.id}
+                    data-name={d.name}
+                    data-w={d.w}
+                    data-h={d.h}
+                    data-type={g.type}
+                    data-on={String(d.on)}
+                  >
+                    <span class="grid size-4 shrink-0 place-items-center rounded border border-border transition-colors group-data-[on=true]:border-primary group-data-[on=true]:bg-primary">
+                      <svg class="size-3 text-primary-foreground opacity-0 transition-opacity group-data-[on=true]:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                    </span>
+                    <span class="min-w-0 flex-1 truncate">{d.name}</span>
+                    <span class="shrink-0 text-xs tabular-nums text-muted-foreground">{d.w}×{d.h}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+
+        <!-- Custom size -->
+        <div class="mt-4 border-t border-border/60 px-2 pt-4">
+          <p class="px-0.5 pb-2 text-xs font-medium text-muted-foreground">Custom viewport</p>
+          <form id="custom-form" class="flex items-center gap-1.5">
+            <input id="custom-w" type="number" min="200" max="3840" placeholder="W" aria-label="Custom width" class="h-8 w-full min-w-0 rounded-md border border-border bg-card px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-ring/50" />
+            <span class="shrink-0 text-xs text-muted-foreground">×</span>
+            <input id="custom-h" type="number" min="200" max="3840" placeholder="H" aria-label="Custom height" class="h-8 w-full min-w-0 rounded-md border border-border bg-card px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-ring/50" />
+            <button type="submit" class="grid size-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground" aria-label="Add custom viewport">
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <p class="border-t border-border/60 p-4 text-xs leading-relaxed text-muted-foreground">
+        Sites that send <code class="rounded bg-muted px-1 py-0.5 text-[11px]">X-Frame-Options</code> headers can't be embedded and will show a notice.
+      </p>
+    </aside>
+    <div id="sidebar-backdrop" class="absolute inset-0 z-20 hidden bg-background/60 backdrop-blur-sm lg:hidden"></div>
+
+    <!-- ===== Canvas ===== -->
+    <div
+      id="canvas"
+      class="min-w-0 flex-1 overflow-auto bg-[radial-gradient(circle,_var(--border)_1px,_transparent_1px)] [background-size:22px_22px]"
+    >
+      <!-- Empty state -->
+      <div id="empty-state" class="flex h-full flex-col items-center justify-center px-6 text-center">
+        <div class="grid size-16 place-items-center rounded-md bg-primary/10 text-primary">
+          <svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25"/></svg>
+        </div>
+        <h1 class="mt-6 text-2xl font-bold tracking-tight">Test any website on every screen</h1>
+        <p class="mt-2 max-w-md text-sm text-muted-foreground">
+          Enter a URL above and hit <span class="font-semibold text-foreground">Check</span>. Pick devices from the panel on the left.
+        </p>
+        <div class="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm">
+          <span class="text-muted-foreground">Try:</span>
+          {['example.com', 'astro.build', 'tailwindcss.com'].map((s) => (
+            <button type="button" class="sample-url rounded-full border border-border bg-card px-3 py-1 text-sm transition-colors hover:border-primary hover:text-primary" data-url={s}>{s}</button>
+          ))}
+        </div>
+      </div>
+
+      <!-- Panes render here -->
+      <div id="frames" class="hidden"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- state ----------
+  type Device = { id: string; name: string; w: number; h: number; type: string; rotated: boolean };
+  type Layout = 'row' | 'grid';
+
+  let currentUrl = '';
+  let zoom: number | 'fit' = 'fit';
+  let layout: Layout = 'row';
+  let customCount = 0;
+  const active = new Map<string, Device>();
+
+  // ---------- elements ----------
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const form = $('url-form') as unknown as HTMLFormElement;
+  const input = $<HTMLInputElement>('url-input');
+  const clearBtn = $('clear-btn');
+  const frames = $('frames');
+  const emptyState = $('empty-state');
+  const zoomLabel = $('zoom-label');
+  const deviceCount = $('device-count');
+  const sidebar = $('sidebar');
+  const backdrop = $('sidebar-backdrop');
+
+  // ---------- persistence ----------
+  const store = {
+    save() {
+      try {
+        localStorage.setItem('vp-state', JSON.stringify({
+          layout,
+          zoom,
+          devices: [...active.values()],
+        }));
+      } catch { /* private mode etc. */ }
+    },
+    load() {
+      try {
+        const raw = localStorage.getItem('vp-state');
+        if (!raw) return null;
+        return JSON.parse(raw) as { layout: Layout; zoom: number | 'fit'; devices: Device[] };
+      } catch {
+        return null;
+      }
+    },
+  };
+
+  // ---------- init devices ----------
+  const saved = store.load();
+  if (saved?.devices?.length) {
+    saved.devices.forEach((d) => {
+      active.set(d.id, d);
+      if (d.id.startsWith('custom-')) customCount = Math.max(customCount, Number(d.id.split('-')[1]) || 0);
+    });
+    layout = saved.layout === 'grid' ? 'grid' : 'row';
+    zoom = saved.zoom === 'fit' || typeof saved.zoom === 'number' ? saved.zoom : 'fit';
+  } else {
+    document.querySelectorAll<HTMLButtonElement>('.device-row[data-on="true"]').forEach((row) => {
+      active.set(row.dataset.id!, {
+        id: row.dataset.id!,
+        name: row.dataset.name!,
+        w: Number(row.dataset.w),
+        h: Number(row.dataset.h),
+        type: row.dataset.type!,
+        rotated: false,
+      });
+    });
+  }
+  // sync sidebar checkmarks with state
+  document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) => {
+    row.dataset.on = String(active.has(row.dataset.id!));
+  });
+
+  // ---------- helpers ----------
+  function normalizeUrl(raw: string): string | null {
+    let v = raw.trim();
+    if (!v) return null;
+    if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
+    try {
+      const u = new URL(v);
+      if (!u.hostname.includes('.') && u.hostname !== 'localhost') return null;
+      return u.href;
+    } catch {
+      return null;
+    }
+  }
+
+  function fitScale(w: number): number {
+    if (w <= 500) return 0.72; // phones
+    if (w <= 1100) return 0.48; // tablets
+    return 0.36; // laptops / desktops
+  }
+  const scaleFor = (w: number) => (zoom === 'fit' ? fitScale(w) : zoom);
+
+  const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+  // ---------- pane rendering ----------
+  function pane(d: Device): HTMLElement {
+    const w = d.rotated ? d.h : d.w;
+    const h = d.rotated ? d.w : d.h;
+    const s = scaleFor(w);
+    const sw = Math.round(w * s);
+    const sh = Math.round(h * s);
+    const name = escapeHtml(d.name);
+
+    const el = document.createElement('div');
+    el.className = 'flex shrink-0 flex-col';
+    el.dataset.frameId = d.id;
+
+    // screen = overlays + iframe; skin differs per device type
+    const screen = `
+      <div class="relative overflow-hidden bg-card" data-role="screen" style="width:${sw}px;height:${sh}px">
+        <div data-role="loader" class="absolute inset-0 z-10 grid place-items-center bg-card">
+          <div class="size-6 animate-spin rounded-full border-2 border-muted border-t-primary"></div>
+        </div>
+        <iframe
+          title="${name} preview"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          loading="lazy"
+          style="width:${w}px;height:${h}px;transform:scale(${s});transform-origin:top left;border:0"
+        ></iframe>
+      </div>
+    `;
+
+    let skin: string;
+    if (d.type === 'phone') {
+      skin = `
+        <div class="rounded-[2rem] border border-border/70 bg-neutral-950 p-2 ${d.rotated ? 'pl-5' : 'pt-5'} shadow-2xl dark:bg-black">
+          ${d.rotated
+            ? '<div class="absolute left-2 top-1/2 h-12 w-1 -translate-y-1/2 rounded-full bg-neutral-800"></div>'
+            : '<div class="absolute left-1/2 top-2 h-1 w-12 -translate-x-1/2 rounded-full bg-neutral-800"></div>'}
+          <div class="overflow-hidden rounded-[1.4rem]">${screen}</div>
+        </div>
+      `;
+    } else if (d.type === 'tablet') {
+      skin = `
+        <div class="rounded-[1.4rem] border border-border/70 bg-neutral-950 p-2.5 shadow-2xl dark:bg-black">
+          <div class="overflow-hidden rounded-[0.9rem]">${screen}</div>
+        </div>
+      `;
+    } else {
+      // browser chrome for laptop / desktop / custom
+      skin = `
+        <div class="overflow-hidden rounded-lg border border-border/70 bg-card shadow-2xl">
+          <div class="flex items-center gap-2 border-b border-border/60 bg-muted/40 px-3 py-1.5">
+            <span class="flex gap-1.5">
+              <span class="size-2.5 rounded-full bg-destructive/60"></span>
+              <span class="size-2.5 rounded-full bg-chart-3/60"></span>
+              <span class="size-2.5 rounded-full bg-primary/60"></span>
+            </span>
+            <span data-role="chrome-url" class="min-w-0 flex-1 truncate rounded bg-background/70 px-2 py-0.5 text-[10px] text-muted-foreground"></span>
+          </div>
+          ${screen}
+        </div>
+      `;
+    }
+
+    el.innerHTML = `
+      <div class="mb-2 flex items-center justify-between gap-2 px-0.5" style="width:${sw + (d.type === 'desktop' ? 2 : 20)}px">
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold">${name}</p>
+          <p class="text-xs tabular-nums text-muted-foreground">${w} × ${h} · ${Math.round(s * 100)}%</p>
+        </div>
+        <div class="flex shrink-0 items-center gap-0.5">
+          <button type="button" data-action="rotate" class="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Rotate ${name}" title="Rotate">
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v6h-6"/></svg>
+          </button>
+          <button type="button" data-action="reload" class="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Reload ${name}" title="Reload">
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+          </button>
+          <a data-action="open" href="${escapeHtml(currentUrl)}" target="_blank" rel="noopener noreferrer" class="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Open ${name} in new tab" title="Open in new tab">
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+          </a>
+          <button type="button" data-action="close" class="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Remove ${name}" title="Remove">
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="relative">${skin}</div>
+    `;
+
+    const iframe = el.querySelector('iframe')!;
+    const loader = el.querySelector<HTMLElement>('[data-role="loader"]')!;
+    const chromeUrl = el.querySelector<HTMLElement>('[data-role="chrome-url"]');
+    if (chromeUrl) chromeUrl.textContent = currentUrl.replace(/^https?:\/\//, '');
+
+    const startLoad = () => {
+      loader.style.display = 'grid';
+      iframe.src = `/api/proxy?url=${encodeURIComponent(currentUrl)}`;
+      iframe.addEventListener('load', () => { loader.style.display = 'none'; }, { once: true });
+    };
+    startLoad();
+
+    el.querySelector('[data-action="reload"]')!.addEventListener('click', startLoad);
+    el.querySelector('[data-action="rotate"]')!.addEventListener('click', () => {
+      d.rotated = !d.rotated;
+      el.replaceWith(pane(d));
+      store.save();
+    });
+    el.querySelector('[data-action="close"]')!.addEventListener('click', () => {
+      removeDevice(d.id);
+    });
+
+    return el;
+  }
+
+  // ---------- canvas ----------
+  function applyLayout() {
+    frames.className =
+      layout === 'row'
+        ? 'flex w-max min-w-full items-start gap-10 px-8 py-7'
+        : 'flex flex-wrap items-start justify-center gap-10 px-8 py-7';
+    document.querySelectorAll<HTMLButtonElement>('.layout-btn').forEach((b) => {
+      b.dataset.on = String(b.dataset.layout === layout);
+    });
+  }
+
+  function renderAll() {
+    if (!currentUrl) return;
+    frames.innerHTML = '';
+    active.forEach((d) => frames.appendChild(pane(d)));
+    emptyState.style.display = 'none';
+    applyLayout();
+    updateCount();
+  }
+
+  function updateCount() {
+    deviceCount.textContent = String(active.size);
+  }
+
+  function addDevice(d: Device) {
+    active.set(d.id, d);
+    const row = document.querySelector<HTMLElement>(`.device-row[data-id="${d.id}"]`);
+    if (row) row.dataset.on = 'true';
+    if (currentUrl) frames.appendChild(pane(d));
+    updateCount();
+    store.save();
+  }
+
+  function removeDevice(id: string) {
+    active.delete(id);
+    const row = document.querySelector<HTMLElement>(`.device-row[data-id="${id}"]`);
+    if (row) row.dataset.on = 'false';
+    frames.querySelector(`[data-frame-id="${id}"]`)?.remove();
+    updateCount();
+    store.save();
+  }
+
+  // ---------- events ----------
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const url = normalizeUrl(input.value);
+    if (!url) {
+      input.focus();
+      input.classList.add('text-destructive');
+      setTimeout(() => input.classList.remove('text-destructive'), 1200);
+      return;
+    }
+    currentUrl = url;
+    input.value = url;
+    clearBtn.style.display = 'block';
+    closeSidebar();
+    renderAll();
+  });
+
+  input.addEventListener('input', () => {
+    clearBtn.style.display = input.value ? 'block' : 'none';
+  });
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    clearBtn.style.display = 'none';
+    input.focus();
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.sample-url').forEach((b) =>
+    b.addEventListener('click', () => {
+      input.value = b.dataset.url!;
+      form.requestSubmit();
+    })
+  );
+
+  // sidebar device rows
+  document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) => {
+    row.addEventListener('click', () => {
+      const id = row.dataset.id!;
+      if (active.has(id)) {
+        removeDevice(id);
+      } else {
+        addDevice({
+          id,
+          name: row.dataset.name!,
+          w: Number(row.dataset.w),
+          h: Number(row.dataset.h),
+          type: row.dataset.type!,
+          rotated: false,
+        });
+      }
+    });
+  });
+
+  // custom viewport
+  ($('custom-form') as unknown as HTMLFormElement).addEventListener('submit', (e) => {
+    e.preventDefault();
+    const wEl = $<HTMLInputElement>('custom-w');
+    const hEl = $<HTMLInputElement>('custom-h');
+    const w = Number(wEl.value);
+    const h = Number(hEl.value);
+    if (!w || !h || w < 200 || h < 200) return;
+    customCount += 1;
+    addDevice({ id: `custom-${customCount}`, name: `Custom ${w}×${h}`, w, h, type: 'desktop', rotated: false });
+    wEl.value = '';
+    hEl.value = '';
+  });
+
+  // layout
+  document.querySelectorAll<HTMLButtonElement>('.layout-btn').forEach((b) =>
+    b.addEventListener('click', () => {
+      layout = (b.dataset.layout as Layout) ?? 'row';
+      applyLayout();
+      store.save();
+    })
+  );
+
+  // zoom
+  const ZOOMS = [0.25, 0.36, 0.5, 0.65, 0.8, 1];
+  function setZoom(z: number | 'fit') {
+    zoom = z;
+    zoomLabel.textContent = z === 'fit' ? 'Fit' : `${Math.round(z * 100)}%`;
+    store.save();
+    renderAll();
+  }
+  zoomLabel.addEventListener('click', () => setZoom('fit'));
+  document.querySelectorAll<HTMLButtonElement>('[data-zoom-step]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const dir = Number(b.dataset.zoomStep);
+      const cur = zoom === 'fit' ? 0.5 : zoom;
+      const idx = ZOOMS.findIndex((z) => z >= cur - 0.001);
+      const next = ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, (idx === -1 ? 2 : idx) + dir))];
+      setZoom(next);
+    })
+  );
+
+  // rotate / reload all
+  $('rotate-all').addEventListener('click', () => {
+    active.forEach((d) => (d.rotated = !d.rotated));
+    store.save();
+    renderAll();
+  });
+  $('reload-all').addEventListener('click', renderAll);
+
+  // sidebar — drawer on mobile, collapse on desktop
+  const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
+
+  function closeSidebar() {
+    sidebar.dataset.open = 'false';
+    backdrop.style.display = 'none';
+  }
+  $('sidebar-toggle').addEventListener('click', () => {
+    if (isDesktop()) {
+      const collapsed = sidebar.dataset.collapsed !== 'true';
+      sidebar.dataset.collapsed = String(collapsed);
+      try { localStorage.setItem('vp-sidebar', collapsed ? 'collapsed' : 'open'); } catch { /* private mode */ }
+    } else {
+      const open = sidebar.dataset.open !== 'true';
+      sidebar.dataset.open = String(open);
+      backdrop.style.display = open ? 'block' : 'none';
+    }
+  });
+  backdrop.addEventListener('click', closeSidebar);
+
+  // restore desktop collapse preference
+  try {
+    if (localStorage.getItem('vp-sidebar') === 'collapsed') sidebar.dataset.collapsed = 'true';
+  } catch { /* private mode */ }
+
+  // init UI state
+  applyLayout();
+  zoomLabel.textContent = zoom === 'fit' ? 'Fit' : `${Math.round((zoom as number) * 100)}%`;
+  updateCount();
+
+  // ---------- theme toggle ----------
+  const sunIcon  = $('icon-sun');
+  const moonIcon = $('icon-moon');
+
+  function syncThemeIcons() {
+    const isDark = document.documentElement.classList.contains('dark');
+    // dark mode → show sun (click to go light); light mode → show moon (click to go dark)
+    sunIcon.classList.toggle('hidden', !isDark);
+    moonIcon.classList.toggle('hidden', isDark);
+  }
+  syncThemeIcons();
+
+  $('theme-toggle').addEventListener('click', () => {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('vp-theme', isDark ? 'dark' : 'light');
+    syncThemeIcons();
+  });
+
+  // ?url= deep link
+  const param = new URLSearchParams(location.search).get('url');
+  if (param) {
+    input.value = param;
+    form.requestSubmit();
+  }
+</script>

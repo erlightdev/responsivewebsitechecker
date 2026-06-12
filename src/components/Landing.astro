@@ -121,24 +121,44 @@ const faqs = [
 
     <!-- Desktop actions -->
     <div class="hidden items-center gap-2 md:flex">
+      <button
+        type="button"
+        class="theme-toggle grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        aria-label="Toggle light/dark mode"
+        title="Toggle theme"
+      >
+        <svg class="hidden size-5 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <svg class="size-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
       <a href="#" class="rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Sign in</a>
-      <a href="#pricing" class="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:scale-[1.03]">Get started</a>
+      <a href="/checker" class="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:scale-[1.03]">Get started</a>
     </div>
 
-    <!-- Mobile toggle -->
-    <button
-      id="nav-toggle"
-      type="button"
-      aria-label="Toggle menu"
-      aria-expanded="false"
-      aria-controls="mobile-menu"
-      class="grid size-10 place-items-center rounded-md text-foreground transition-colors hover:bg-muted md:hidden"
-    >
-      <svg class="size-6 [&_.close]:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <g class="open"><path d="M4 6h16M4 12h16M4 18h16"/></g>
-        <g class="close"><path d="M6 6l12 12M18 6L6 18"/></g>
-      </svg>
-    </button>
+    <!-- Mobile actions: theme toggle + hamburger -->
+    <div class="flex items-center gap-1 md:hidden">
+      <button
+        type="button"
+        class="theme-toggle grid size-10 place-items-center rounded-md text-foreground transition-colors hover:bg-muted"
+        aria-label="Toggle light/dark mode"
+        title="Toggle theme"
+      >
+        <svg class="hidden size-6 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <svg class="size-6 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button
+        id="nav-toggle"
+        type="button"
+        aria-label="Toggle menu"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        class="grid size-10 place-items-center rounded-md text-foreground transition-colors hover:bg-muted"
+      >
+        <svg class="size-6 [&_.close]:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <g class="open"><path d="M4 6h16M4 12h16M4 18h16"/></g>
+          <g class="close"><path d="M6 6l12 12M18 6L6 18"/></g>
+        </svg>
+      </button>
+    </div>
   </nav>
 
   <!-- Mobile menu -->
@@ -154,7 +174,7 @@ const faqs = [
     </ul>
     <div class="mt-2 flex flex-col gap-2 border-t border-border/60 pt-2">
       <a href="#" class="rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Sign in</a>
-      <a href="#pricing" class="rounded-md bg-primary px-3 py-2.5 text-center text-sm font-semibold text-primary-foreground">Get started</a>
+      <a href="/checker" class="rounded-md bg-primary px-3 py-2.5 text-center text-sm font-semibold text-primary-foreground">Get started</a>
     </div>
   </div>
 </header>
@@ -185,7 +205,7 @@ const faqs = [
       </p>
 
       <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <a href="#pricing" class="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03] sm:w-auto">
+        <a href="/checker" class="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03] sm:w-auto">
           Start testing free
         </a>
         <a href="#how" class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card/60 px-6 py-3 text-sm font-semibold backdrop-blur transition-colors hover:bg-muted sm:w-auto">
@@ -342,7 +362,7 @@ const faqs = [
       <h2 class="mx-auto max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">Stop guessing how your site looks on mobile</h2>
       <p class="mx-auto mt-4 max-w-xl text-muted-foreground">Join thousands of teams shipping pixel-perfect, responsive experiences every day.</p>
       <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <a href="#" class="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03] sm:w-auto">Get started free</a>
+        <a href="/checker" class="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03] sm:w-auto">Get started free</a>
         <a href="#features" class="w-full rounded-md border border-border bg-background/50 px-6 py-3 text-sm font-semibold transition-colors hover:bg-muted sm:w-auto">Explore features</a>
       </div>
     </div>
@@ -392,6 +412,14 @@ const faqs = [
       toggle?.setAttribute('aria-expanded', 'false');
       icon?.querySelector('.open')?.classList.remove('hidden');
       icon?.querySelector('.close')?.classList.add('hidden');
+    });
+  });
+
+  // Theme toggle (icons are CSS-driven via the dark: variant, so just flip the class)
+  document.querySelectorAll('.theme-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('vp-theme', isDark ? 'dark' : 'light');
     });
   });
 </script>
