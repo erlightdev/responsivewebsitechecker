@@ -36,6 +36,11 @@ const groups = [
     ],
   },
 ];
+
+const user = Astro.locals.user;
+const displayName = user?.name || user?.email?.split('@')[0] || 'Account';
+const email = user?.email ?? '';
+const initial = (displayName.trim()[0] || 'U').toUpperCase();
 ---
 
 <div class="flex h-dvh flex-col overflow-hidden">
@@ -257,7 +262,7 @@ const groups = [
         aria-haspopup="menu"
         aria-expanded="false"
       >
-        A
+        {initial}
       </button>
 
       <!-- Dropdown (shadcn-style) -->
@@ -269,10 +274,10 @@ const groups = [
       >
         <!-- User label -->
         <div class="flex items-center gap-2 px-2 py-1.5">
-          <span class="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">A</span>
+          <span class="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{initial}</span>
           <div class="min-w-0">
-            <p class="truncate text-sm font-medium leading-tight">Admin</p>
-            <p class="truncate text-xs text-muted-foreground">admin@hiver.com.np</p>
+            <p class="truncate text-sm font-medium leading-tight">{displayName}</p>
+            <p class="truncate text-xs text-muted-foreground">{email}</p>
           </div>
         </div>
         <div class="-mx-1 my-1 h-px bg-border"></div>
@@ -316,6 +321,12 @@ const groups = [
       </div>
     </div>
   </header>
+
+  <!-- Logout overlay -->
+  <div id="logout-overlay" class="fixed inset-0 z-100 hidden flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm">
+    <svg class="size-8 animate-spin text-primary" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.4 0 0 5.4 0 12h4z"/></svg>
+    <p class="text-sm font-medium text-muted-foreground">Signing out…</p>
+  </div>
 
   <div class="relative flex min-h-0 flex-1 overflow-hidden">
     <!-- ===== Sidebar ===== -->
@@ -517,6 +528,7 @@ const groups = [
   import { mountEditor } from '../lib/capture-editor';
   import type { Capture } from '../lib/captures-db';
   import { toast } from '../lib/toast';
+  import { signOut } from '../lib/auth-client';
 
   // ---------- state ----------
   type Device = { id: string; name: string; w: number; h: number; type: string; rotated: boolean };
@@ -1617,11 +1629,37 @@ const groups = [
     if (e.key === 'Escape' && $('shortcuts-modal').style.display === 'flex') $('shortcuts-modal').style.display = 'none';
   });
 
-  // ---------- logout (placeholder — no auth backend yet) ----------
-  $('logout-item').addEventListener('click', () => {
+  // ---------- logout ----------
+  let loggingOut = false;
+  $('logout-item').addEventListener('click', async () => {
+    if (loggingOut) return;
+    loggingOut = true;
     closeAccountMenu();
-    // TODO: wire up real session/sign-out once auth exists
-    console.info('[account] Log out clicked — no auth backend yet.');
+
+    // show the spinner overlay
+    const overlay = $('logout-overlay');
+    overlay.style.display = 'flex';
+
+    // end the server session (clears the auth cookie)
+    try {
+      await signOut();
+    } catch {
+      /* even if the network call fails, still clear local state below */
+    }
+
+    // clear this app's local persistence (workspaces, theme, sidebar, activity, etc.)
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('vp-'))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* storage may be unavailable — ignore */
+    }
+
+    // brief beat so the spinner is visible, then route to login
+    setTimeout(() => {
+      location.href = '/login';
+    }, 450);
   });
 
   // ?url= deep link

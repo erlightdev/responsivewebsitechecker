@@ -9,16 +9,24 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@astrojs/node": "^10.1.4",
+    "@prisma/client": "^6.19.3",
     "@tailwindcss/vite": "^4.3.0",
     "astro": "^6.4.6",
+    "better-auth": "^1.6.18",
+    "nodemailer": "^8.0.11",
     "tailwind-scrollbar": "^4.0.2",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
+    "@types/nodemailer": "^8.0.1",
+    "prisma": "^6.19.3",
     "shadcn": "^4.11.0"
   }
 }

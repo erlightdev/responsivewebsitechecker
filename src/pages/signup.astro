@@ -1,0 +1,249 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const hasGithub = !!(import.meta.env.GITHUB_CLIENT_ID && import.meta.env.GITHUB_CLIENT_SECRET);
+const hasGoogle = !!(import.meta.env.GOOGLE_CLIENT_ID && import.meta.env.GOOGLE_CLIENT_SECRET);
+const anySocial = hasGithub || hasGoogle;
+---
+
+<Layout title="Get started — Viewport">
+  <main class="grid min-h-dvh place-items-center px-4 py-10">
+    <div class="w-full max-w-sm">
+      <!-- Logo -->
+      <div class="mb-6 flex justify-center">
+        <span class="grid size-12 place-items-center rounded-full bg-primary text-primary-foreground">
+          <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </span>
+      </div>
+
+      <!-- Step 1: email + social -->
+      <section id="step-start">
+        <div class="mb-7 text-center">
+          <h1 class="text-2xl font-bold tracking-tight">Get Started with Viewport</h1>
+          <p class="mt-2 text-sm text-muted-foreground">Already have an account? <a href="/login" class="font-semibold text-foreground hover:underline">Login</a></p>
+        </div>
+
+        {anySocial && (
+          <>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {hasGoogle && (
+                <button type="button" data-social="google" class="flex h-11 items-center justify-center gap-2.5 rounded-lg border border-border bg-card text-sm font-medium transition-colors hover:bg-muted">
+                  <svg class="size-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z"/></svg>
+                  Continue with Google
+                </button>
+              )}
+              {hasGithub && (
+                <button type="button" data-social="github" class="flex h-11 items-center justify-center gap-2.5 rounded-lg border border-border bg-card text-sm font-medium transition-colors hover:bg-muted">
+                  <svg class="size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.5 2.87 8.32 6.84 9.67.5.1.68-.22.68-.49v-1.7c-2.78.62-3.37-1.36-3.37-1.36-.45-1.18-1.11-1.5-1.11-1.5-.91-.63.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.85.09-.66.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9v2.82c0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.26C22 6.58 17.52 2 12 2z"/></svg>
+                  Continue with GitHub
+                </button>
+              )}
+            </div>
+            <div class="my-5 flex items-center gap-3 text-xs text-muted-foreground"><span class="h-px flex-1 bg-border"></span>Or<span class="h-px flex-1 bg-border"></span></div>
+          </>
+        )}
+
+        <form id="email-form" class="space-y-4">
+          <div class="space-y-1.5">
+            <label for="email" class="text-sm text-muted-foreground">Enter your email</label>
+            <input id="email" type="email" autocomplete="email" required placeholder="name@email.com" class="h-11 w-full rounded-lg border border-border bg-background px-3.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/40" />
+          </div>
+          <button type="submit" class="h-11 w-full rounded-lg bg-foreground text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60">Sign up</button>
+        </form>
+
+        <p class="mt-5 text-center text-xs leading-relaxed text-muted-foreground">
+          By signing up, you agree to our <a href="#" class="underline hover:text-foreground">Terms &amp; Conditions</a> and <a href="#" class="underline hover:text-foreground">Privacy Policy</a>
+        </p>
+        <p class="mt-5 text-center text-sm text-muted-foreground">Need help? <a href="/help" class="font-semibold text-foreground hover:underline">Contact support</a></p>
+      </section>
+
+      <!-- Step 2: verify -->
+      <section id="step-otp" class="hidden">
+        <div class="mb-7 text-center">
+          <h1 class="text-2xl font-bold tracking-tight">Verify your email</h1>
+          <p class="mt-2 text-sm text-muted-foreground">Enter the 6-digit code sent to <span id="otp-email" class="text-foreground"></span></p>
+        </div>
+
+        <form id="otp-form" class="space-y-5">
+          <div id="otp-boxes" class="flex justify-center gap-2">
+            {Array.from({ length: 6 }).map(() => (
+              <input data-otp type="text" inputmode="numeric" maxlength="1" class="size-12 rounded-lg border border-border bg-background text-center text-lg font-semibold outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/40" />
+            ))}
+          </div>
+          <button type="submit" class="h-11 w-full rounded-lg border border-border bg-card text-sm font-semibold transition-colors hover:bg-muted disabled:opacity-60">Verify email</button>
+        </form>
+
+        <div class="mt-4 text-center">
+          <button type="button" id="otp-resend" class="text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-60"></button>
+        </div>
+        <div class="mt-2 text-center">
+          <button type="button" id="go-back" class="text-sm font-semibold text-foreground hover:underline">Go back</button>
+        </div>
+      </section>
+
+      <!-- Step 3: set password -->
+      <section id="step-password" class="hidden">
+        <div class="mb-7 text-center">
+          <h1 class="text-2xl font-bold tracking-tight">Set a password</h1>
+          <p class="mt-2 text-sm text-muted-foreground">Create a password so you can sign in faster next time.</p>
+        </div>
+
+        <form id="password-form" class="space-y-4">
+          <div class="space-y-1.5">
+            <label for="password" class="text-sm text-muted-foreground">Password</label>
+            <div class="relative">
+              <input id="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Enter a password" class="h-11 w-full rounded-lg border border-border bg-background px-3.5 pr-10 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/40" />
+              <button type="button" id="pw-toggle" aria-label="Show password" class="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:text-foreground">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="h-1 overflow-hidden rounded-full bg-muted"><div id="pw-bar" class="h-full w-0 bg-destructive transition-all"></div></div>
+            <p class="text-xs text-muted-foreground">At least 8 characters, with a mix of letters and numbers.</p>
+          </div>
+          <div class="space-y-1.5">
+            <label for="confirm" class="text-sm text-muted-foreground">Confirm password</label>
+            <input id="confirm" type="password" autocomplete="new-password" required placeholder="Re-enter your password" class="h-11 w-full rounded-lg border border-border bg-background px-3.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/40" />
+          </div>
+          <button type="submit" class="h-11 w-full rounded-lg bg-foreground text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60">Set password &amp; continue</button>
+        </form>
+
+        <div class="mt-3 text-center">
+          <button type="button" id="skip-password" class="text-sm font-medium text-muted-foreground hover:text-foreground">Skip for now</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { signIn, emailOtp } from '../lib/auth-client';
+  import { setupOtpInputs, startCountdown } from '../lib/otp-ui';
+  import { toast } from '../lib/toast';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const next = new URLSearchParams(location.search).get('next') || '/checker';
+  const prefill = new URLSearchParams(location.search).get('email');
+  if (prefill) ($('email') as HTMLInputElement).value = prefill;
+
+  const showError = (msg: string) => toast.error(msg);
+  const clearError = () => {};
+
+  const stepStart = $('step-start');
+  const stepOtp = $('step-otp');
+  const stepPassword = $('step-password');
+  const emailForm = $('email-form') as HTMLFormElement;
+  const otpForm = $('otp-form') as HTMLFormElement;
+  const passwordForm = $('password-form') as HTMLFormElement;
+
+  let email = '';
+  const otp = setupOtpInputs($('otp-boxes'));
+  let stopTimer: (() => void) | null = null;
+
+  async function sendCode() {
+    const { error } = await emailOtp.sendVerificationOtp({ email, type: 'sign-in' });
+    if (error) { showError(error.message || 'Could not send the code.'); return false; }
+    toast.success('Verification code sent!', { description: email, log: 'Signup code sent' });
+    stopTimer?.();
+    stopTimer = startCountdown($('otp-resend') as HTMLButtonElement, 60, 'Resend code');
+    return true;
+  }
+
+  // Step 1: email → send OTP, show verify
+  emailForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+    email = ($('email') as HTMLInputElement).value.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showError('Enter a valid email address.');
+    const btn = emailForm.querySelector('button[type=submit]') as HTMLButtonElement;
+    btn.disabled = true;
+    const ok = await sendCode();
+    btn.disabled = false;
+    if (!ok) return;
+    $('otp-email').textContent = email;
+    stepStart.style.display = 'none';
+    stepOtp.style.display = 'block';
+    otp.focus();
+  });
+
+  // Resend / go back
+  $('otp-resend').addEventListener('click', () => sendCode());
+  $('go-back').addEventListener('click', () => {
+    clearError();
+    otp.clear();
+    stepOtp.style.display = 'none';
+    stepStart.style.display = 'block';
+  });
+
+  // Step 2: verify → account is created + signed in
+  otpForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+    const code = otp.value();
+    if (code.length !== 6) return showError('Enter all 6 digits.');
+    const btn = otpForm.querySelector('button[type=submit]') as HTMLButtonElement;
+    btn.disabled = true;
+    const { error } = await signIn.emailOtp({ email, otp: code });
+    btn.disabled = false;
+    if (error) return showError(error.message || 'Invalid or expired code.');
+    // account created + signed in → ask the user to set a password
+    toast.success('Email verified', { description: email, log: 'Account created' });
+    stepOtp.style.display = 'none';
+    stepPassword.style.display = 'block';
+    ($('password') as HTMLInputElement).focus();
+  });
+
+  // Step 3: set a password for the freshly verified account
+  $('pw-toggle').addEventListener('click', () => {
+    const inp = $('password') as HTMLInputElement;
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  });
+
+  const pw = $('password') as HTMLInputElement;
+  pw.addEventListener('input', () => {
+    const v = pw.value;
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+    if (/\d/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+    const bar = $('pw-bar');
+    bar.style.width = `${(score / 4) * 100}%`;
+    bar.className = `h-full transition-all ${score <= 1 ? 'bg-destructive' : score === 2 ? 'bg-amber-500' : score === 3 ? 'bg-yellow-400' : 'bg-emerald-500'}`;
+  });
+
+  passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+    const password = pw.value;
+    const confirm = ($('confirm') as HTMLInputElement).value;
+    if (password.length < 8) return showError('Password must be at least 8 characters.');
+    if (password !== confirm) return showError('Passwords do not match.');
+
+    const btn = passwordForm.querySelector('button[type=submit]') as HTMLButtonElement;
+    btn.disabled = true;
+    const res = await fetch('/api/set-password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    btn.disabled = false;
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return showError(data?.error || 'Could not set the password.');
+    }
+    toast.success('Welcome to Viewport', { description: 'Password set', log: 'Password set' });
+    location.href = next;
+  });
+
+  $('skip-password').addEventListener('click', () => {
+    toast.success('Welcome to Viewport', { description: email, log: 'Account created' });
+    location.href = next;
+  });
+
+  // Social
+  document.querySelectorAll<HTMLButtonElement>('[data-social]').forEach((b) =>
+    b.addEventListener('click', () =>
+      signIn.social({ provider: b.dataset.social as 'github' | 'google', callbackURL: next })
+    )
+  );
+</script>

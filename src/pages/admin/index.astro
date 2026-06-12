@@ -1,0 +1,152 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AccountShell from '../../components/AccountShell.astro';
+import { prisma } from '../../lib/prisma';
+
+// Middleware already guarantees a superadmin reached this page.
+const me = Astro.locals.user;
+
+const RESOURCES = ['checker', 'captures', 'workspaces', 'social'] as const;
+
+const rows = await prisma.user.findMany({
+  orderBy: { createdAt: 'desc' },
+  select: {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    banned: true,
+    emailVerified: true,
+    createdAt: true,
+    accounts: { select: { providerId: true } },
+    flags: { select: { resource: true, allowed: true } },
+  },
+});
+
+const users = rows.map((u) => {
+  const flagMap: Record<string, boolean> = {};
+  RESOURCES.forEach((r) => (flagMap[r] = true));
+  u.flags.forEach((f) => (flagMap[f.resource] = f.allowed));
+  return {
+    ...u,
+    methods: [...new Set(u.accounts.map((a) => a.providerId))],
+    flagMap,
+    isSelf: u.id === me?.id,
+  };
+});
+
+const fmtDate = (d: Date) => new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+const totalUsers = users.length;
+const bannedCount = users.filter((u) => u.banned).length;
+const adminCount = users.filter((u) => u.role === 'superadmin').length;
+---
+
+<Layout title="Admin — Viewport">
+  <AccountShell active="admin" heading="Admin" description="Manage users, roles, and resource access.">
+    <!-- Stats -->
+    <div class="mb-6 grid grid-cols-3 gap-3">
+      <div class="rounded-lg border border-border bg-card p-4"><p class="text-xs text-muted-foreground">Users</p><p class="mt-1 text-2xl font-bold">{totalUsers}</p></div>
+      <div class="rounded-lg border border-border bg-card p-4"><p class="text-xs text-muted-foreground">Superadmins</p><p class="mt-1 text-2xl font-bold">{adminCount}</p></div>
+      <div class="rounded-lg border border-border bg-card p-4"><p class="text-xs text-muted-foreground">Banned</p><p class="mt-1 text-2xl font-bold text-destructive">{bannedCount}</p></div>
+    </div>
+
+    <div class="space-y-3">
+      {users.map((u) => (
+        <div class="rounded-lg border border-border bg-card p-4" data-user={u.id} data-role={u.role}>
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="truncate font-semibold">{u.name || 'Unnamed'}</span>
+                {u.role === 'superadmin' && <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">superadmin</span>}
+                {u.banned && <span class="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">banned</span>}
+                {!u.emailVerified && <span class="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">unverified</span>}
+              </div>
+              <p class="truncate text-sm text-muted-foreground">{u.email}</p>
+              <p class="mt-0.5 text-xs text-muted-foreground">Joined {fmtDate(u.createdAt)} · {u.methods.join(', ') || 'no methods'}</p>
+            </div>
+            {!u.isSelf && (
+              <div class="flex shrink-0 flex-wrap items-center gap-2">
+                <button type="button" data-act="role" data-next={u.role === 'superadmin' ? 'user' : 'superadmin'} class="h-8 rounded-md border border-border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted">
+                  {u.role === 'superadmin' ? 'Demote' : 'Make admin'}
+                </button>
+                <button type="button" data-act="ban" data-banned={String(!!u.banned)} class:list={['h-8 rounded-md px-3 text-xs font-semibold transition-colors', u.banned ? 'border border-border bg-background hover:bg-muted' : 'bg-destructive text-white hover:opacity-90']}>
+                  {u.banned ? 'Unban' : 'Ban'}
+                </button>
+              </div>
+            )}
+            {u.isSelf && <span class="shrink-0 self-center text-xs text-muted-foreground">(you)</span>}
+          </div>
+
+          {!u.isSelf && (
+            <div class="mt-3 border-t border-border/60 pt-3">
+              <p class="mb-2 text-xs font-medium text-muted-foreground">Resource access</p>
+              <div class="flex flex-wrap gap-2">
+                {RESOURCES.map((r) => (
+                  <button
+                    type="button"
+                    data-act="flag"
+                    data-resource={r}
+                    data-allowed={String(u.flagMap[r])}
+                    class:list={['flag-chip h-8 rounded-md border px-3 text-xs font-medium capitalize transition-colors', u.flagMap[r] ? 'border-border bg-background text-foreground hover:bg-muted' : 'border-destructive/40 bg-destructive/10 text-destructive']}
+                  >
+                    {r}{u.flagMap[r] ? '' : ' · off'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  </AccountShell>
+</Layout>
+
+<script>
+  import { adminApi } from '../../lib/auth-client';
+  import { toast } from '../../lib/toast';
+
+  document.querySelectorAll<HTMLElement>('[data-user]').forEach((card) => {
+    const userId = card.dataset.user!;
+
+    card.querySelector('[data-act=role]')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const role = btn.dataset.next as 'user' | 'superadmin';
+      btn.disabled = true;
+      const { error } = await adminApi.setRole({ userId, role });
+      if (error) { btn.disabled = false; return toast.error('Could not change role', { description: error.message }); }
+      toast.success(role === 'superadmin' ? 'Promoted to admin' : 'Demoted to user', { log: 'Role changed' });
+      setTimeout(() => location.reload(), 600);
+    });
+
+    card.querySelector('[data-act=ban]')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const banned = btn.dataset.banned === 'true';
+      btn.disabled = true;
+      const { error } = banned
+        ? await adminApi.unbanUser({ userId })
+        : await adminApi.banUser({ userId, banReason: 'Suspended by an administrator' });
+      if (error) { btn.disabled = false; return toast.error('Action failed', { description: error.message }); }
+      toast.success(banned ? 'User unbanned' : 'User banned', { log: banned ? 'User unbanned' : 'User banned' });
+      setTimeout(() => location.reload(), 600);
+    });
+
+    card.querySelectorAll<HTMLButtonElement>('[data-act=flag]').forEach((chip) =>
+      chip.addEventListener('click', async () => {
+        const resource = chip.dataset.resource!;
+        const allowed = !(chip.dataset.allowed === 'true');
+        chip.disabled = true;
+        const res = await fetch('/api/admin/flags', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ userId, resource, allowed }),
+        });
+        chip.disabled = false;
+        if (!res.ok) return toast.error('Could not update access');
+        chip.dataset.allowed = String(allowed);
+        chip.textContent = allowed ? resource : `${resource} · off`;
+        chip.className = `flag-chip h-8 rounded-md border px-3 text-xs font-medium capitalize transition-colors ${allowed ? 'border-border bg-background text-foreground hover:bg-muted' : 'border-destructive/40 bg-destructive/10 text-destructive'}`;
+        toast.success(allowed ? `Enabled ${resource}` : `Disabled ${resource}`, { log: 'Resource access changed' });
+      })
+    );
+  });
+</script>

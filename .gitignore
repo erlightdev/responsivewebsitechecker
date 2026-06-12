@@ -17,6 +17,9 @@ pnpm-debug.log*
 .env
 .env.production
 
+# prisma generated client
+src/generated/
+
 # macOS-specific files
 .DS_Store
 

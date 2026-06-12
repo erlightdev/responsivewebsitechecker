@@ -1,6 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import AccountShell from '../components/AccountShell.astro';
+import { prisma } from '../lib/prisma';
+
+const user = Astro.locals.user;
+const name = user?.name ?? '';
+const email = user?.email ?? '';
+const initial = (name.trim()[0] || email.trim()[0] || 'U').toUpperCase();
+
+// Does this account already have a password? (credential account with a hash)
+const hasPassword = user
+  ? !!(await prisma.account.findFirst({
+      where: { userId: user.id, providerId: 'credential', NOT: { password: null } },
+      select: { id: true },
+    }))
+  : false;
 ---
 
 <Layout title="Account — Viewport">
@@ -9,28 +23,50 @@ import AccountShell from '../components/AccountShell.astro';
       <!-- Profile -->
       <section class="rounded-lg border border-border bg-card p-6">
         <div class="flex items-center gap-4">
-          <span class="grid size-16 place-items-center rounded-full bg-primary/10 text-xl font-semibold text-primary">A</span>
+          <span class="grid size-16 place-items-center rounded-full bg-primary/10 text-xl font-semibold text-primary">{initial}</span>
           <div>
-            <button type="button" class="h-9 rounded-md border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted">Change avatar</button>
-            <p class="mt-1.5 text-xs text-muted-foreground">JPG, GIF or PNG. 1MB max.</p>
+            <p class="font-medium">{name || 'Unnamed'}</p>
+            <p class="mt-0.5 text-xs text-muted-foreground">{email}</p>
           </div>
         </div>
 
-        <form class="mt-6 grid gap-4 sm:grid-cols-2">
+        <form id="profile-form" class="mt-6 grid gap-4 sm:grid-cols-2">
           <div class="space-y-1.5">
             <label for="name" class="text-sm font-medium">Full name</label>
-            <input id="name" type="text" value="Admin" class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+            <input id="name" type="text" value={name} class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
           </div>
           <div class="space-y-1.5">
             <label for="email" class="text-sm font-medium">Email</label>
-            <input id="email" type="email" value="admin@hiver.com.np" class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
-          </div>
-          <div class="space-y-1.5 sm:col-span-2">
-            <label for="company" class="text-sm font-medium">Company</label>
-            <input id="company" type="text" placeholder="Optional" class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+            <input id="email" type="email" value={email} disabled class="h-9 w-full rounded-md border border-border bg-muted px-3 text-sm text-muted-foreground outline-none" />
           </div>
           <div class="sm:col-span-2">
-            <button type="button" class="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02]">Save changes</button>
+            <button type="submit" class="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02]">Save changes</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Password -->
+      <section class="rounded-lg border border-border bg-card p-6">
+        <h2 class="text-sm font-semibold">{hasPassword ? 'Change password' : 'Set a password'}</h2>
+        <p class="mt-1 text-sm text-muted-foreground">{hasPassword ? 'Update the password you use to sign in.' : 'Add a password so you can sign in without a code.'}</p>
+
+        <form id="password-form" class="mt-5 grid max-w-md gap-4" data-has-password={String(hasPassword)}>
+          {hasPassword && (
+            <div class="space-y-1.5">
+              <label for="current" class="text-sm font-medium">Current password</label>
+              <input id="current" type="password" autocomplete="current-password" required class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+            </div>
+          )}
+          <div class="space-y-1.5">
+            <label for="new" class="text-sm font-medium">New password</label>
+            <input id="new" type="password" autocomplete="new-password" required minlength="8" class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+          </div>
+          <div class="space-y-1.5">
+            <label for="confirm" class="text-sm font-medium">Confirm new password</label>
+            <input id="confirm" type="password" autocomplete="new-password" required class="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
+          </div>
+          <div>
+            <button type="submit" class="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02]">{hasPassword ? 'Update password' : 'Set password'}</button>
           </div>
         </form>
       </section>
@@ -39,8 +75,70 @@ import AccountShell from '../components/AccountShell.astro';
       <section class="rounded-lg border border-destructive/40 bg-destructive/5 p-6">
         <h2 class="text-sm font-semibold">Delete account</h2>
         <p class="mt-1 text-sm text-muted-foreground">Permanently remove your account and all data. This can't be undone.</p>
-        <button type="button" class="mt-4 h-9 rounded-md bg-destructive px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.02]">Delete account</button>
+        <button type="button" id="delete-btn" class="mt-4 h-9 rounded-md bg-destructive px-4 text-sm font-semibold text-white transition-transform hover:scale-[1.02]">Delete account</button>
       </section>
     </div>
   </AccountShell>
 </Layout>
+
+<script>
+  import { authClient, signOut } from '../lib/auth-client';
+  import { toast } from '../lib/toast';
+
+  const form = document.getElementById('profile-form') as HTMLFormElement;
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (document.getElementById('name') as HTMLInputElement).value.trim();
+    if (!name) return toast.warning('Name cannot be empty', { log: false });
+    const btn = form.querySelector('button[type=submit]') as HTMLButtonElement;
+    btn.disabled = true;
+    const { error } = await authClient.updateUser({ name });
+    btn.disabled = false;
+    if (error) return toast.error('Could not save', { description: error.message });
+    toast.success('Profile updated', { description: name, log: 'Profile updated' });
+  });
+
+  // Change / set password
+  const pwForm = document.getElementById('password-form') as HTMLFormElement;
+  const hasPassword = pwForm?.dataset.hasPassword === 'true';
+  pwForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPassword = (document.getElementById('new') as HTMLInputElement).value;
+    const confirm = (document.getElementById('confirm') as HTMLInputElement).value;
+    if (newPassword.length < 8) return toast.error('Password must be at least 8 characters.');
+    if (newPassword !== confirm) return toast.error('Passwords do not match.');
+
+    const btn = pwForm.querySelector('button[type=submit]') as HTMLButtonElement;
+    btn.disabled = true;
+
+    if (hasPassword) {
+      const currentPassword = (document.getElementById('current') as HTMLInputElement).value;
+      const { error } = await authClient.changePassword({ currentPassword, newPassword, revokeOtherSessions: true });
+      btn.disabled = false;
+      if (error) return toast.error('Could not update password', { description: error.message });
+      toast.success('Password updated', { log: 'Password changed' });
+    } else {
+      const res = await fetch('/api/set-password', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      btn.disabled = false;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return toast.error('Could not set password', { description: data?.error });
+      }
+      toast.success('Password set', { log: 'Password set' });
+      setTimeout(() => location.reload(), 700); // re-render as "Change password"
+    }
+    pwForm.reset();
+  });
+
+  document.getElementById('delete-btn')?.addEventListener('click', async () => {
+    if (!confirm('Permanently delete your account? This cannot be undone.')) return;
+    const { error } = await authClient.deleteUser();
+    if (error) return toast.error('Could not delete account', { description: error.message });
+    await signOut();
+    location.href = '/';
+  });
+</script>

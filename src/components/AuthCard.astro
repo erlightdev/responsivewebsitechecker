@@ -1,0 +1,29 @@
+---
+// Centered auth card shell shared by login / signup / forgot / reset pages.
+interface Props {
+  heading: string;
+  sub?: string;
+}
+const { heading, sub } = Astro.props;
+---
+
+<main class="grid min-h-dvh place-items-center px-4 py-10">
+  <div class="w-full max-w-sm">
+    <a href="/" class="mb-8 flex items-center justify-center gap-2 font-semibold tracking-tight">
+      <span class="grid size-9 place-items-center rounded-md bg-primary text-primary-foreground">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </span>
+      <span class="text-lg">Viewport</span>
+    </a>
+
+    <div class="rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
+      <div class="mb-6 text-center">
+        <h1 class="text-xl font-bold tracking-tight">{heading}</h1>
+        {sub && <p class="mt-1.5 text-sm text-muted-foreground">{sub}</p>}
+      </div>
+      <slot />
+    </div>
+
+    <slot name="footer" />
+  </div>
+</main>

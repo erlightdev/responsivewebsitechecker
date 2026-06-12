@@ -1,13 +1,15 @@
-import { defineMiddleware } from 'astro:middleware';
+import { defineMiddleware, sequence } from 'astro:middleware';
 import { fetchSite, errorPage, VPHOST } from './lib/proxy-core';
+import { auth } from './lib/auth';
+import { prisma } from './lib/prisma';
 
-// Reverse-proxy for the responsive checker. A proxied request is identified by
+// 1) Reverse-proxy for the responsive checker. A proxied request is identified by
 // a `__vphost=<origin>` marker — either on the request itself (the document and
 // rewritten subresources) or, for resources the page builds at runtime (e.g. a
 // SPA bundle inserting `<img src="/assets/logo.png">`), on the Referer. The
 // request path mirrors the real path, so we just recombine it with the origin.
 // Our own app never sets the marker, so its requests fall straight through.
-export const onRequest = defineMiddleware(async ({ request }, next) => {
+const proxy = defineMiddleware(async ({ request }, next) => {
   if (request.method !== 'GET') return next();
 
   const url = new URL(request.url);
@@ -54,3 +56,76 @@ export const onRequest = defineMiddleware(async ({ request }, next) => {
     });
   }
 });
+
+// 2) Auth gating. Public marketing + auth pages stay open; the app is gated.
+const PUBLIC_PATHS = new Set(['/', '/login', '/signup', '/forgot-password', '/reset-password']);
+// Path → resource key for per-user resource flags.
+const RESOURCE_BY_PREFIX: Array<[string, string]> = [
+  ['/captures', 'captures'],
+  ['/workspaces', 'workspaces'],
+  ['/social', 'social'],
+  ['/checker', 'checker'],
+];
+
+const isPublic = (p: string) =>
+  PUBLIC_PATHS.has(p) ||
+  p.startsWith('/api/auth') ||
+  p === '/api/auth-method' ||
+  p.startsWith('/_') ||
+  p.startsWith('/favicon') ||
+  /\.[a-z0-9]+$/i.test(p); // static assets
+
+const authGate = defineMiddleware(async (context, next) => {
+  const { request, url } = context;
+  const path = url.pathname;
+
+  // Proxied subresource requests carry the marker — never gate those.
+  if (url.searchParams.has(VPHOST) || request.headers.get('referer')?.includes(VPHOST)) {
+    return next();
+  }
+
+  const session = await auth.api.getSession({ headers: request.headers });
+  const user = (session?.user ?? null) as App.Locals['user'];
+  context.locals.user = user;
+
+  if (isPublic(path)) {
+    // Already signed in → bounce away from auth screens to the app.
+    if (user && ['/login', '/signup'].includes(path)) {
+      return context.redirect('/checker');
+    }
+    return next();
+  }
+
+  // Gated from here on.
+  if (!user) {
+    return context.redirect(`/login?next=${encodeURIComponent(path)}`);
+  }
+
+  if (user.banned) {
+    return context.redirect('/login?error=banned');
+  }
+
+  // Superadmin area.
+  if (path.startsWith('/admin')) {
+    if (user.role !== 'superadmin') return new Response('Not found', { status: 404 });
+    return next();
+  }
+
+  // Per-resource restriction (superadmin bypasses all flags).
+  if (user.role !== 'superadmin') {
+    const match = RESOURCE_BY_PREFIX.find(([prefix]) => path.startsWith(prefix));
+    if (match) {
+      const flag = await prisma.resourceFlag.findUnique({
+        where: { userId_resource: { userId: user.id, resource: match[1] } },
+        select: { allowed: true },
+      });
+      if (flag && !flag.allowed) {
+        return context.redirect('/checker?error=restricted');
+      }
+    }
+  }
+
+  return next();
+});
+
+export const onRequest = sequence(proxy, authGate);

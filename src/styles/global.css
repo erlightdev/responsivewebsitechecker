@@ -386,3 +386,20 @@
 .tip[data-tip-align="end"]:focus-visible::after {
   transform: translate(0, 0) scale(1);
 }
+
+/* Neutralize the browser autofill background so inputs keep theme colors.
+   Chrome/Safari paint a pale fill + their own text color over -webkit-autofill;
+   the inset box-shadow trick masks it with our --background token. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+  -webkit-box-shadow: 0 0 0 1000px var(--background) inset;
+  box-shadow: 0 0 0 1000px var(--background) inset;
+  /* delay the autofill repaint effectively forever */
+  transition: background-color 100000s ease-in-out 0s;
+}
