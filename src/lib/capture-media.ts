@@ -1,7 +1,7 @@
 // Screen capture via the native Screen Capture API. The display stream is
-// requested once and reused for subsequent shots/recordings (no re-prompt).
+// requested once and reused for subsequent screenshots (no re-prompt).
 // Screenshots can be cropped to a target element (e.g. the preview canvas);
-// recordings capture the full shared surface.
+// recordings capture the full shared surface, then stop sharing when done.
 
 let stream: MediaStream | null = null;
 let video: HTMLVideoElement | null = null;
@@ -121,5 +121,6 @@ export async function record(
   window.clearInterval(timer);
 
   const blob = new Blob(chunks, { type: mime });
+  stopSharing();
   return { blob, thumb, width: w, height: h, durationMs: ms };
 }
