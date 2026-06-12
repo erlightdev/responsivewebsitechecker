@@ -20,9 +20,15 @@ import CaptureEditor from '../components/CaptureEditor.astro';
     </header>
 
     <main class="flex-1 py-8">
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold tracking-tight">Captures</h1>
-        <p class="mt-1 text-sm text-muted-foreground">Screenshots and recordings of your previews, with annotations.</p>
+      <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">Captures</h1>
+          <p class="mt-1 text-sm text-muted-foreground">Screenshots and recordings of your previews, with annotations.</p>
+        </div>
+        <div id="storage" class="hidden shrink-0 items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm">
+          <svg class="size-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+          <span><span id="storage-count" class="font-semibold text-foreground"></span> <span class="text-muted-foreground">·</span> <span id="storage-size" class="font-semibold text-foreground"></span> <span class="text-muted-foreground">stored</span></span>
+        </div>
       </div>
 
       <div id="grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
@@ -67,6 +73,13 @@ import CaptureEditor from '../components/CaptureEditor.astro';
   let urls: string[] = [];
   const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
   const fmt = (t: number) => new Date(t).toLocaleString();
+  const fmtBytes = (n: number) => {
+    if (n < 1024) return `${n} B`;
+    const u = ['KB', 'MB', 'GB'];
+    let i = -1;
+    do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+    return `${n.toFixed(n < 10 ? 1 : 0)} ${u[i]}`;
+  };
 
   function download(c: Capture) {
     const url = URL.createObjectURL(c.blob);
@@ -89,6 +102,13 @@ import CaptureEditor from '../components/CaptureEditor.astro';
     grid.innerHTML = '';
     empty.style.display = list.length ? 'none' : 'flex';
     grid.style.display = list.length ? 'grid' : 'none';
+
+    // total data stored across all capture blobs (+ thumbnails)
+    const totalBytes = list.reduce((sum, c) => sum + (c.blob?.size || 0) + (c.thumb?.size || 0), 0);
+    const storage = $('storage');
+    storage.style.display = list.length ? 'flex' : 'none';
+    $('storage-count').textContent = `${list.length} item${list.length === 1 ? '' : 's'}`;
+    $('storage-size').textContent = fmtBytes(totalBytes);
 
     for (const c of list) {
       const thumbBlob = c.thumb || (c.type === 'screenshot' ? c.blob : null);
