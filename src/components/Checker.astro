@@ -75,6 +75,11 @@ const groups = [
       </button>
     </form>
 
+    <!-- Clear cache (fixed rose tint, theme-independent) -->
+    <button type="button" id="clear-cache" class="tip grid size-9 shrink-0 place-items-center rounded-md border border-rose-500/40 bg-rose-500/5 text-rose-500 transition-colors hover:bg-rose-500/15 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300" aria-label="Clear cache and soft-reload all devices" data-tip="Clear cache & reload">
+      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v6c0 1.66-4 3-9 3s-9-1.34-9-3V5"/><path d="M21 11v6c0 1.66-4 3-9 3s-9-1.34-9-3v-6"/></svg>
+    </button>
+
     <div class="mx-1 hidden h-6 w-px shrink-0 bg-border sm:block"></div>
 
     <!-- Add screen -->
@@ -510,11 +515,14 @@ const groups = [
   // Build a same-origin proxy URL whose path mirrors the target's, so SPA
   // routers (which branch on location.pathname) see the real route. The target
   // origin rides along in a __vphost marker the proxy middleware reads.
-  function toProxy(raw: string): string {
+  // `bust` forces a fresh upstream fetch (bypasses the proxy's TTL cache) by
+  // making the request URL unique — used by "Clear cache".
+  function toProxy(raw: string, bust?: number): string {
     try {
       const u = new URL(raw);
       const params = new URLSearchParams(u.search);
       params.set('__vphost', u.origin);
+      if (bust) params.set('__cb', String(bust));
       return `${u.pathname}?${params.toString()}${u.hash}`;
     } catch {
       return raw;
@@ -614,14 +622,17 @@ const groups = [
     const chromeUrl = el.querySelector<HTMLElement>('[data-role="chrome-url"]');
     if (chromeUrl) chromeUrl.textContent = currentUrl.replace(/^https?:\/\//, '');
 
-    const startLoad = () => {
+    const startLoad = (bust?: number) => {
       loader.style.display = 'grid';
-      iframe.src = toProxy(currentUrl);
+      iframe.src = toProxy(currentUrl, bust);
       iframe.addEventListener('load', () => { loader.style.display = 'none'; }, { once: true });
     };
     startLoad();
+    // expose an in-place reload so navbar "Clear cache" can refresh this pane
+    // without rebuilding it (keeps device/zoom/rotation state intact)
+    (el as unknown as { __reload: (bust?: number) => void }).__reload = startLoad;
 
-    el.querySelector('[data-action="reload"]')!.addEventListener('click', startLoad);
+    el.querySelector('[data-action="reload"]')!.addEventListener('click', () => startLoad());
     el.querySelector('[data-action="rotate"]')!.addEventListener('click', () => {
       d.rotated = !d.rotated;
       el.replaceWith(pane(d));
@@ -908,6 +919,17 @@ const groups = [
     renderAll();
   });
   $('reload-all').addEventListener('click', renderAll);
+
+  // clear cache + soft reload — refresh every pane in place with a fresh
+  // upstream fetch, keeping device/zoom/rotation state untouched. One shared
+  // token means the proxy de-dupes to a single upstream hit per URL.
+  $('clear-cache').addEventListener('click', () => {
+    if (!currentUrl) return;
+    const token = Date.now();
+    frames.querySelectorAll<HTMLElement>('[data-frame-id]').forEach((el) =>
+      (el as unknown as { __reload?: (bust?: number) => void }).__reload?.(token)
+    );
+  });
 
   // sidebar — drawer on mobile, collapse on desktop
   const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
