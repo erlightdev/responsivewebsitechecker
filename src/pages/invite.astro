@@ -1,0 +1,161 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AccountShell from '../components/AccountShell.astro';
+import { getReferralSummary } from '../lib/payments/referrals';
+import { isCreditEligible } from '../lib/payments/credits';
+
+const user = Astro.locals.user!; // gated by middleware
+const summary = await getReferralSummary(user.id);
+const eligible = await isCreditEligible(user.id);
+
+const base = (import.meta.env.PUBLIC_APP_URL || new URL(Astro.request.url).origin).replace(/\/$/, '');
+const inviteLink = `${base}/?ref=${summary.code}`;
+
+const progressPct = Math.round((summary.invitedCount / summary.maxInvites) * 100);
+const maxCreditAmount = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
+  (summary.perInviteCents * summary.maxInvites) / 100,
+);
+---
+
+<Layout title="Invite & earn — Viewport">
+  <AccountShell
+    active="invite"
+    heading="Invite & earn"
+    description={`Invite friends and earn ${summary.perInviteAmount} in credit each — up to ${maxCreditAmount}. Credit applies to your next upgrade, tax-free.`}
+  >
+    <div class="space-y-6" data-credit-cents={summary.creditCents} data-credit-amount={summary.creditAmount}>
+      <!-- Credit balance + progress -->
+      <section class="grid gap-4 sm:grid-cols-2">
+        <div class="rounded-lg border border-border bg-card p-5">
+          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Available credit</p>
+          <p class="mt-2 text-3xl font-bold tracking-tight">{summary.creditAmount}</p>
+          <p class="mt-1 text-xs text-muted-foreground">
+            {eligible
+              ? 'Applied automatically on your first upgrade. No tax on credit.'
+              : 'Credit applies only to a new account’s first upgrade.'}
+          </p>
+        </div>
+        <div class="rounded-lg border border-border bg-card p-5">
+          <div class="flex items-baseline justify-between">
+            <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Invites used</p>
+            <p class="text-sm font-semibold">{summary.invitedCount} / {summary.maxInvites}</p>
+          </div>
+          <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div class="h-full rounded-full bg-primary transition-all" style={`width:${progressPct}%`}></div>
+          </div>
+          <p class="mt-2 text-xs text-muted-foreground">
+            {summary.remaining > 0
+              ? `${summary.remaining} invite${summary.remaining === 1 ? '' : 's'} left to earn`
+              : 'You’ve earned the maximum from invites.'}
+          </p>
+        </div>
+      </section>
+
+      <!-- Share link -->
+      <section class="rounded-lg border border-border bg-card p-5">
+        <p class="text-sm font-medium">Your invite link</p>
+        <p class="mt-1 text-xs text-muted-foreground">
+          Share this link. When someone signs up through it, you earn {summary.perInviteAmount}.
+        </p>
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            id="invite-link"
+            type="text"
+            readonly
+            value={inviteLink}
+            class="h-10 flex-1 rounded-md border border-border bg-background px-3 text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          />
+          <button
+            id="copy-link"
+            type="button"
+            data-link={inviteLink}
+            class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy link</span>
+          </button>
+        </div>
+        <p class="mt-3 text-xs text-muted-foreground">
+          Referral code: <span class="font-mono font-semibold text-foreground">{summary.code}</span>
+        </p>
+      </section>
+
+      <!-- Invite history -->
+      <section class="rounded-lg border border-border bg-card">
+        <div class="border-b border-border p-5">
+          <p class="text-sm font-medium">Invited friends</p>
+          <p class="text-xs text-muted-foreground">People who signed up with your link.</p>
+        </div>
+        {summary.invites.length === 0 ? (
+          <p class="p-5 text-sm text-muted-foreground">No invites yet. Share your link to start earning.</p>
+        ) : (
+          <ul class="divide-y divide-border">
+            {summary.invites.map((inv) => (
+              <li class="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                <span class="truncate text-muted-foreground">{inv.email}</span>
+                <span class="flex items-center gap-3">
+                  <span class="text-xs text-muted-foreground">{inv.date.toLocaleDateString()}</span>
+                  <span class="font-semibold text-primary">+{inv.amount}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <a href="/billing" class="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+        Use your credit on an upgrade
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </AccountShell>
+</Layout>
+
+<script>
+  import { toast } from '../lib/toast';
+
+  const btn = document.getElementById('copy-link') as HTMLButtonElement | null;
+  const input = document.getElementById('invite-link') as HTMLInputElement | null;
+  btn?.addEventListener('click', async () => {
+    const link = btn.dataset.link || input?.value || '';
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      input?.select();
+      document.execCommand('copy');
+    }
+    const label = btn.querySelector('span');
+    const prev = label?.textContent;
+    if (label) label.textContent = 'Copied!';
+    setTimeout(() => { if (label && prev) label.textContent = prev; }, 1800);
+    // Sonner toast + activity log
+    toast.success('Invite link copied', { description: link, log: 'Referral link copied' });
+  });
+
+  // Notify (once) when the credit balance has grown since the last visit — covers
+  // both the referrer (a friend signed up) and the invited account (welcome credit).
+  const root = document.querySelector<HTMLElement>('[data-credit-cents]');
+  if (root) {
+    const cents = Number(root.dataset.creditCents || '0');
+    const amount = root.dataset.creditAmount || '';
+    const KEY = 'vp-credit-seen';
+    const prevRaw = localStorage.getItem(KEY);
+    if (prevRaw === null) {
+      // First time we've seen this account's balance.
+      if (cents > 0) {
+        toast.success('You have referral credit', {
+          description: `${amount} ready for your first upgrade.`,
+          log: 'Referral credit available',
+        });
+      }
+    } else if (cents > Number(prevRaw)) {
+      const delta = (cents - Number(prevRaw)) / 100;
+      const deltaStr = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: delta % 1 === 0 ? 0 : 2 }).format(delta);
+      toast.success('You earned referral credit', {
+        description: `+${deltaStr} — new balance ${amount}.`,
+        log: 'Referral credit earned',
+      });
+    }
+    localStorage.setItem(KEY, String(cents));
+  }
+</script>

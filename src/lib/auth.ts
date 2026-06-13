@@ -5,6 +5,7 @@ import { createAccessControl } from 'better-auth/plugins/access';
 import { defaultStatements, adminAc } from 'better-auth/plugins/admin/access';
 import { prisma } from './prisma';
 import { sendMail, otpEmail, resetLinkEmail } from './mailer';
+import { attributeReferral } from './payments/referrals';
 
 // Access control: "superadmin" gets the full admin permission set; "user" gets none.
 const ac = createAccessControl(defaultStatements);
@@ -85,6 +86,21 @@ export const auth = betterAuth({
             return { data: { ...user, role: 'superadmin', emailVerified: true } };
           }
           return { data: user };
+        },
+        // Invite & earn: if the signup carried an invite (vp_ref cookie set when
+        // the visitor landed via a referral link), credit the referrer. Best-effort
+        // and fully guarded — a failure here must never block account creation.
+        after: async (user, ctx) => {
+          try {
+            const cookie = ctx?.headers?.get('cookie') ?? '';
+            const match = cookie.match(/(?:^|;\s*)vp_ref=([^;]+)/);
+            const code = match ? decodeURIComponent(match[1]) : null;
+            if (code) {
+              await attributeReferral({ code, newUserId: user.id, newUserEmail: user.email });
+            }
+          } catch (err) {
+            console.error('[referrals] attribution failed:', err);
+          }
         },
       },
     },

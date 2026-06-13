@@ -10,6 +10,7 @@ import { auth } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { dodo, isPaymentsConfigured } from '../../../lib/payments/dodo';
 import { resolveProductId } from '../../../lib/payments/plan-store';
+import { applyCreditToCheckout } from '../../../lib/payments/credits';
 import type { Interval } from '../../../lib/payments/plans';
 
 export const prerender = false;
@@ -37,6 +38,12 @@ export const POST: APIRoute = async ({ request }) => {
   const productId = await resolveProductId('pro', interval);
   if (!productId) return json({ error: 'product_not_configured' }, 503);
 
+  // Plan price drives the credit→percentage conversion (and is needed regardless).
+  const planRow = await prisma.plan.findUnique({
+    where: { interval },
+    select: { priceCents: true },
+  });
+
   // 3) Reuse an existing Dodo customer when we have one.
   const user = await prisma.user.findUnique({
     where: { id: sessionUser.id },
@@ -50,12 +57,25 @@ export const POST: APIRoute = async ({ request }) => {
     ? { customer_id: user.dodoCustomerId }
     : { email: sessionUser.email, name: sessionUser.name || user?.name || sessionUser.email };
 
+  // Spend store credit (invite & earn) as a one-time discount, if any is available.
+  const credit = planRow
+    ? await applyCreditToCheckout({
+        userId: sessionUser.id,
+        productId,
+        priceCents: planRow.priceCents,
+      })
+    : null;
+
+  const metadata: Record<string, string> = { userId: sessionUser.id, plan: 'pro', interval };
+  if (credit) metadata.redemptionId = credit.redemptionId;
+
   try {
     const checkout = await dodo.checkoutSessions.create({
       product_cart: [{ product_id: productId, quantity: 1 }],
       customer,
       return_url: returnUrl,
-      metadata: { userId: sessionUser.id, plan: 'pro', interval },
+      ...(credit ? { discount_code: credit.code } : {}),
+      metadata,
     } as Parameters<typeof dodo.checkoutSessions.create>[0]);
 
     const url = (checkout as { checkout_url?: string; url?: string }).checkout_url

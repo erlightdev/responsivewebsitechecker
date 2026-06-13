@@ -88,6 +88,18 @@ const authGate = defineMiddleware(async (context, next) => {
     return next();
   }
 
+  // Invite & earn: remember a referral code from the link (?ref=CODE) so it can be
+  // attributed when the visitor later signs up. Short-lived, harmless if unused.
+  const ref = url.searchParams.get('ref');
+  if (ref && /^[A-Z0-9]{4,16}$/i.test(ref)) {
+    context.cookies.set('vp_ref', ref.toUpperCase(), {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+  }
+
   const session = await auth.api.getSession({ headers: request.headers });
   const user = (session?.user ?? null) as App.Locals['user'];
   context.locals.user = user;

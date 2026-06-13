@@ -4,6 +4,7 @@ import type { Subscription } from '@prisma/client';
 import { prisma } from '../prisma';
 import { ACTIVE_STATUSES, type Interval, type PlanId } from './plans';
 import { productToPlan } from './plan-store';
+import { consumeRedemption } from './credits';
 import { dodo } from './dodo';
 
 export interface PlanState {
@@ -118,6 +119,12 @@ export async function confirmSubscriptionFromReturn(
       cancelAtPeriodEnd: Boolean(sub.cancel_at_next_billing_date),
       currentPeriodEnd: sub.next_billing_date ? new Date(sub.next_billing_date) : null,
     });
+
+    // Spend any store credit applied at checkout (idempotent with the webhook).
+    const redemptionId = ((sub.metadata ?? {}) as Record<string, string>).redemptionId;
+    if (ACTIVE_STATUSES.has(sub.status) && redemptionId) {
+      await consumeRedemption(redemptionId);
+    }
 
     if (customer.customer_id) {
       await prisma.user

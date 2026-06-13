@@ -10,6 +10,7 @@ import type { APIRoute } from 'astro';
 import { prisma } from '../../../lib/prisma';
 import { dodo } from '../../../lib/payments/dodo';
 import { upsertSubscriptionFromWebhook } from '../../../lib/payments/subscription';
+import { consumeRedemption } from '../../../lib/payments/credits';
 
 export const prerender = false;
 
@@ -93,6 +94,10 @@ export const POST: APIRoute = async ({ request }) => {
             await prisma.user
               .update({ where: { id: userId }, data: { dodoCustomerId: customerId } })
               .catch(() => {/* unique race / already set — ignore */});
+          }
+          // Once active, spend any store credit that was applied at checkout.
+          if (status === 'active' && metadata.redemptionId) {
+            await consumeRedemption(metadata.redemptionId);
           }
         } else {
           console.warn('[payments] webhook %s missing userId/subscriptionId', type);

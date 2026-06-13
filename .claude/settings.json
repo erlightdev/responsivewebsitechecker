@@ -26,7 +26,17 @@
       "Bash(awk '/export interface PaymentListParams/,/^}/' node_modules/dodopayments/resources/payments.d.ts)",
       "Bash(awk '/export interface PaymentListResponse /,/^}/' node_modules/dodopayments/resources/payments.d.ts)",
       "Bash(curl -s \"http://localhost:4321/\")",
-      "Bash(grep -oE 'data-yearly=\"\\\\$[0-9]+\"|-50%|data-monthly=\"\\\\$[0-9]+\"')"
+      "Bash(grep -oE 'data-yearly=\"\\\\$[0-9]+\"|-50%|data-monthly=\"\\\\$[0-9]+\"')",
+      "Bash(awk '/interface DiscountCreateParams/{f=1} f{print} f&&/^}/{exit}' resources/discounts.d.ts)",
+      "Bash(git -C . status --short)",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 4321 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Select-Object -Unique | ForEach-Object { Write-Output \"Stopping PID $_\"; Stop-Process -Id $_ -Force } } else { Write-Output \"No dev server on 4321\" })",
+      "PowerShell(Start-Sleep -Seconds 6; try { $r = Invoke-WebRequest -Uri \"http://localhost:4321/\" -UseBasicParsing -TimeoutSec 15; Write-Output \"home: $\\($r.StatusCode\\)\" } catch { Write-Output \"home err: $\\($_.Exception.Message\\)\" }; try { $r2 = Invoke-WebRequest -Uri \"http://localhost:4321/invite\" -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 15; Write-Output \"invite: $\\($r2.StatusCode\\)\" } catch { Write-Output \"invite status: $\\($_.Exception.Response.StatusCode.value__\\)\" })",
+      "Bash(cd /c/Users/Admin/Desktop/responsive/responsivewesbitechecker)",
+      "Bash(grep -rln 'sonner\\\\|toast' src)",
+      "Bash(sed -n '1,40p' src/pages/signup.astro)",
+      "Bash(grep -rln \"GenericEndpointContext\" node_modules/better-auth/dist/shared)",
+      "Bash(npx tsc *)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:4321/invite\" -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 15 } catch { Write-Output \"invite -> $\\($_.Exception.Response.StatusCode.value__\\) \\(redirect to login = gated OK\\)\" }; try { $h = Invoke-WebRequest -Uri \"http://localhost:4321/\" -UseBasicParsing -TimeoutSec 15; Write-Output \"home -> $\\($h.StatusCode\\)\" } catch { Write-Output \"home err $\\($_.Exception.Message\\)\" })"
     ]
   }
 }

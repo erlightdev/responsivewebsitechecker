@@ -29,10 +29,17 @@ model User {
   // Dodo Payments customer id (set after first checkout; reused for later purchases)
   dodoCustomerId String? @unique
 
+  // Invite & earn: a unique share code and the user's accrued store credit
+  // (smallest USD unit). Credit is spendable as a discount at checkout.
+  referralCode String? @unique
+  creditCents  Int     @default(0)
+
   sessions      Session[]
   accounts      Account[]
   flags         ResourceFlag[]
   subscriptions Subscription[]
+  referrals     Referral[]         @relation("referrer")
+  redemptions   CreditRedemption[]
 
   @@map("user")
 }
@@ -137,6 +144,42 @@ model WebhookEvent {
   createdAt DateTime @default(now())
 
   @@map("webhook_event")
+}
+
+// Invite & earn: one row per successfully-attributed invite. The referrer earns
+// a fixed credit when an invited person signs up. invitedUserId is unique so an
+// invite can only ever be counted once (re-runs of the signup hook are no-ops).
+model Referral {
+  id            String   @id @default(cuid())
+  referrerId    String
+  invitedUserId String   @unique
+  invitedEmail  String
+  creditCents   Int // credit awarded for this invite (smallest USD unit)
+  createdAt     DateTime @default(now())
+
+  referrer User @relation("referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@map("referral")
+}
+
+// A pending/applied spend of store credit. Created at checkout (a one-time Dodo
+// discount equal to the credit is generated); marked applied — and the credit
+// deducted — only when the resulting subscription goes active.
+model CreditRedemption {
+  id          String   @id @default(cuid())
+  userId      String
+  discountId  String // Dodo discount id
+  code        String // Dodo discount code attached to the checkout
+  amountCents Int // credit consumed (smallest USD unit)
+  status      String   @default("pending") // pending | applied | void
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("credit_redemption")
 }
 
 // Custom: per-user, per-resource access flags toggled by a superadmin.

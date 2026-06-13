@@ -9,6 +9,8 @@ import {
   type Txn,
 } from '../lib/payments/subscription';
 import { getPublicPricing } from '../lib/payments/plan-store';
+import { isCreditEligible } from '../lib/payments/credits';
+import { prisma } from '../lib/prisma';
 
 // middleware guarantees a signed-in user on this gated page
 const me = Astro.locals.user;
@@ -64,11 +66,40 @@ const plans = [
 const statusLabel: Record<string, string> = {
   active: 'Active', on_hold: 'On hold', cancelled: 'Cancelled', expired: 'Expired', failed: 'Failed',
 };
+
+// Invite & earn: store credit that will auto-apply to an upgrade.
+const usd = (cents: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD', maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+const creditRow = await prisma.user.findUnique({ where: { id: userId }, select: { creditCents: true } });
+const creditCents = creditRow?.creditCents ?? 0;
+const creditAmount = usd(creditCents);
+const creditEligible = await isCreditEligible(userId);
+
+// On a successful return, surface how much credit was just applied (if any). Credit
+// is first-upgrade only, so there's at most one applied redemption per account.
+let appliedCreditAmount = '';
+if (justPaid) {
+  const applied = await prisma.creditRedemption.findFirst({
+    where: { userId, status: 'applied' },
+    orderBy: { updatedAt: 'desc' },
+    select: { amountCents: true },
+  });
+  if (applied) appliedCreditAmount = usd(applied.amountCents);
+}
 ---
 
 <Layout title="Billing — Viewport">
   <AccountShell active="billing" heading="Billing" description="Manage your plan and payment details.">
-    <div class="space-y-6" data-just-paid={justPaid ? '1' : undefined} data-is-pro={isPro ? '1' : undefined}>
+    <div
+      class="space-y-6"
+      data-just-paid={justPaid ? '1' : undefined}
+      data-is-pro={isPro ? '1' : undefined}
+      data-credit-cents={creditCents}
+      data-credit-amount={creditAmount}
+      data-credit-applied={appliedCreditAmount || undefined}
+    >
       <!-- Current plan banner -->
       <section class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-5">
         <div>
@@ -86,6 +117,26 @@ const statusLabel: Record<string, string> = {
           {isPro ? (statusLabel[planState.status ?? ''] ?? 'Active') : 'Free'}
         </span>
       </section>
+
+      <!-- Invite & earn credit -->
+      {creditCents > 0 && (
+        <section class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-5">
+          <div class="flex items-center gap-3">
+            <span class="grid size-9 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
+              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12 M2 7h20v5H2z M12 22V7 M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            </span>
+            <div>
+              <p class="text-sm font-semibold">{creditAmount} in referral credit</p>
+              <p class="text-xs text-muted-foreground">
+                {creditEligible
+                  ? 'Applied automatically on your first upgrade — no tax on credit.'
+                  : 'Credit applies only to a new account’s first upgrade.'}
+              </p>
+            </div>
+          </div>
+          <a href="/invite" class="text-sm font-medium text-primary hover:underline">Earn more</a>
+        </section>
+      )}
 
       <!-- Billing period toggle -->
       {pricing.yearly && (
@@ -226,6 +277,8 @@ const statusLabel: Record<string, string> = {
 </Layout>
 
 <script>
+  import { toast } from '../lib/toast';
+
   // ----- shadcn-style dialog helper (replaces native alert) -----
   const dlg = document.getElementById('bill-dialog');
   const dlgPanel = document.getElementById('bill-dialog-panel');
@@ -313,6 +366,8 @@ const statusLabel: Record<string, string> = {
 
   const params = new URLSearchParams(location.search);
 
+  const creditRoot = document.querySelector<HTMLElement>('[data-credit-cents]');
+
   // Returned from a successful checkout (already confirmed server-side).
   if (document.querySelector('[data-just-paid]')) {
     const isProNow = !!document.querySelector('[data-is-pro]');
@@ -322,7 +377,20 @@ const statusLabel: Record<string, string> = {
         ? 'Your Pro plan is now active. Enjoy unlimited screens, Social previews and Capture.'
         : 'Thanks! Your payment is being finalized — your plan will update shortly.',
     );
+    if (isProNow) {
+      toast.success('Pro plan activated', { description: 'Unlimited screens, Social previews and Capture are unlocked.', log: 'Upgraded to Pro' });
+    }
+    const applied = creditRoot?.dataset.creditApplied;
+    if (applied) {
+      toast.success('Referral credit applied', { description: `${applied} was deducted from this purchase.`, log: 'Referral credit applied' });
+    }
     history.replaceState(null, '', '/billing'); // strip checkout params from the URL
+  }
+
+  // Keep the cross-page credit baseline in sync so the invite page doesn't
+  // re-announce an increase the user has already seen here.
+  if (creditRoot) {
+    localStorage.setItem('vp-credit-seen', String(Number(creditRoot.dataset.creditCents || '0')));
   }
 
   // Arrived from a "Get Pro" CTA (e.g. right after signup) → preselect the
