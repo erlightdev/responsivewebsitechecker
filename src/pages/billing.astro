@@ -3,9 +3,20 @@ import Layout from '../layouts/Layout.astro';
 import AccountShell from '../components/AccountShell.astro';
 
 const plans = [
-  { id: 'free', name: 'Free', price: '$0', period: '/mo', features: ['Up to 3 devices', 'Standard proxy', 'Light & dark themes'], current: true },
-  { id: 'pro', name: 'Pro', price: '$12', period: '/mo', features: ['Unlimited devices', 'Custom screens', 'Faster proxy & priority support'], current: false, highlight: true },
-  { id: 'team', name: 'Team', price: '$39', period: '/mo', features: ['Everything in Pro', 'Shared workspaces', 'SSO & admin controls'], current: false },
+  {
+    id: 'free', name: 'Free',
+    monthly: { price: '$0', period: '/mo', note: '' },
+    yearly: { price: '$0', period: '/yr', note: '' },
+    features: ['Up to 6 screens', '2 saved workspaces', 'Light, dark & color themes'],
+    current: true,
+  },
+  {
+    id: 'pro', name: 'Pro',
+    monthly: { price: '$1', period: '/mo', note: 'Intro price for your first 3 months, then $3/mo.' },
+    yearly: { price: '$18', period: '/yr', note: "50% off your first year — just $1.50/mo, then $36/yr." },
+    features: ['Unlimited screens & workspaces', 'Social previews & Capture', 'Priority support'],
+    current: false, highlight: true,
+  },
 ];
 ---
 
@@ -21,15 +32,30 @@ const plans = [
         <span class="rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">Active</span>
       </section>
 
+      <!-- Billing period toggle -->
+      <div class="flex justify-center">
+        <div class="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1" id="billing-toggle" role="tablist" aria-label="Billing period">
+          <button type="button" data-period="monthly" class="billing-opt rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-primary text-primary-foreground" aria-selected="true">Monthly</button>
+          <button type="button" data-period="yearly" class="billing-opt inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground" aria-selected="false">
+            Yearly
+            <span class="rounded-full bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">-50%</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Plans -->
-      <section class="grid gap-4 md:grid-cols-3">
+      <section class="grid gap-4 md:grid-cols-2">
         {plans.map((p) => (
           <div class:list={['flex flex-col rounded-lg border bg-card p-5', p.highlight ? 'border-primary ring-1 ring-primary/30' : 'border-border']}>
             <div class="flex items-center justify-between">
               <h3 class="font-semibold">{p.name}</h3>
               {p.highlight && <span class="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">Popular</span>}
             </div>
-            <p class="mt-2"><span class="text-2xl font-bold">{p.price}</span><span class="text-sm text-muted-foreground">{p.period}</span></p>
+            <p class="mt-2">
+              <span class="price-amount text-2xl font-bold" data-monthly={p.monthly.price} data-yearly={p.yearly.price}>{p.monthly.price}</span>
+              <span class="price-period text-sm text-muted-foreground" data-monthly={p.monthly.period} data-yearly={p.yearly.period}>{p.monthly.period}</span>
+            </p>
+            <p class="price-note mt-1 text-xs text-muted-foreground" data-monthly={p.monthly.note} data-yearly={p.yearly.note} style={p.monthly.note ? '' : 'display:none'}>{p.monthly.note}</p>
             <ul class="mt-4 flex-1 space-y-2 text-sm text-muted-foreground">
               {p.features.map((f) => (
                 <li class="flex items-start gap-2">
@@ -54,3 +80,28 @@ const plans = [
     </div>
   </AccountShell>
 </Layout>
+
+<script>
+  const billingToggle = document.getElementById('billing-toggle');
+  if (billingToggle) {
+    const opts = billingToggle.querySelectorAll<HTMLButtonElement>('.billing-opt');
+    const setPeriod = (period: 'monthly' | 'yearly') => {
+      opts.forEach((o) => {
+        const active = o.dataset.period === period;
+        o.setAttribute('aria-selected', String(active));
+        o.classList.toggle('bg-primary', active);
+        o.classList.toggle('text-primary-foreground', active);
+        o.classList.toggle('text-muted-foreground', !active);
+      });
+      document.querySelectorAll<HTMLElement>('.price-amount, .price-period').forEach((el) => {
+        el.textContent = el.dataset[period] ?? el.textContent;
+      });
+      document.querySelectorAll<HTMLElement>('.price-note').forEach((el) => {
+        const note = el.dataset[period] ?? '';
+        el.textContent = note;
+        el.style.display = note ? '' : 'none';
+      });
+    };
+    opts.forEach((o) => o.addEventListener('click', () => setPeriod(o.dataset.period as 'monthly' | 'yearly')));
+  }
+</script>

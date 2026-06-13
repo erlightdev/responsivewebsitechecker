@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "mcp__shadcn__get_project_registries"
+      "mcp__shadcn__get_project_registries",
+      "Bash(xargs grep -l \"price\\\\|subscription\\\\|plan\\\\|tier\")",
+      "Bash(xargs -0 grep -l \"Free\\\\|Pro\\\\|Business\\\\|Enterprise\\\\|price\\\\|tier\\\\|limit\")",
+      "Bash(xargs grep -i \"\\\\.price\\\\|\\\\.features\\\\|\\\\.plan\\\\|stripe\\\\|payment\\\\|billing\")"
     ]
   }
 }

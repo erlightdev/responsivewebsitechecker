@@ -403,3 +403,13 @@ select:-webkit-autofill {
   /* delay the autofill repaint effectively forever */
   transition: background-color 100000s ease-in-out 0s;
 }
+
+/* The checker URL input is transparent inside a bg-card wrapper, so its
+   autofill mask must use --card or it paints a mismatched band. */
+#url-form #url-input:-webkit-autofill,
+#url-form #url-input:-webkit-autofill:hover,
+#url-form #url-input:-webkit-autofill:focus,
+#url-form #url-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--card) inset;
+  box-shadow: 0 0 0 1000px var(--card) inset;
+}
