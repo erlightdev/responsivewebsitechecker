@@ -1,0 +1,144 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AccountShell from '../../components/AccountShell.astro';
+import { listPlans } from '../../lib/payments/plan-store';
+import { isPaymentsConfigured } from '../../lib/payments/dodo';
+
+// Middleware guarantees a superadmin reached this page.
+const plans = await listPlans();
+const byInterval = Object.fromEntries(plans.map((p) => [p.interval, p]));
+
+const intervals = [
+  { id: 'monthly', label: 'Pro Monthly', hint: 'Billed every month' },
+  { id: 'yearly', label: 'Pro Yearly', hint: 'Billed every year' },
+] as const;
+
+const taxOptions = ['saas', 'digital_products', 'e_book', 'edtech'];
+const money = (cents: number, ccy: string) =>
+  new Intl.NumberFormat(undefined, { style: 'currency', currency: ccy }).format(cents / 100);
+---
+
+<Layout title="Plans — Admin">
+  <AccountShell active="plans" heading="Subscription plans" description="Author the Pro plans here — each save creates or updates the matching product in Dodo Payments.">
+    {!isPaymentsConfigured && (
+      <div class="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-400">
+        Dodo Payments isn’t configured. Set <code>DODO_PAYMENTS_API_KEY</code> in your environment to enable syncing.
+      </div>
+    )}
+
+    <div class="grid gap-4 md:grid-cols-2">
+      {intervals.map((iv) => {
+        const p = byInterval[iv.id];
+        const priceMajor = p ? (p.priceCents / 100).toString() : '';
+        return (
+          <form class="plan-form flex flex-col gap-3 rounded-lg border border-border bg-card p-5" data-interval={iv.id}>
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-semibold">{iv.label}</h3>
+                <p class="text-xs text-muted-foreground">{iv.hint}</p>
+              </div>
+              <span
+                class:list={['sync-badge rounded-full px-2 py-0.5 text-[11px] font-semibold', p?.dodoProductId ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground']}
+                title={p?.dodoProductId ?? ''}
+              >
+                {p?.dodoProductId ? 'Synced' : 'Not synced'}
+              </span>
+            </div>
+
+            <label class="text-xs font-medium text-muted-foreground">
+              Name
+              <input name="name" type="text" required value={p?.name ?? (iv.id === 'yearly' ? 'Pro (Yearly)' : 'Pro (Monthly)')}
+                class="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/50" />
+            </label>
+
+            <div class="grid grid-cols-2 gap-3">
+              <label class="text-xs font-medium text-muted-foreground">
+                Price
+                <input name="price" type="number" min="0.01" step="0.01" required value={priceMajor} placeholder={iv.id === 'yearly' ? '36.00' : '3.00'}
+                  class="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/50" />
+              </label>
+              <label class="text-xs font-medium text-muted-foreground">
+                Currency
+                <input name="currency" type="text" maxlength="3" value={p?.currency ?? 'USD'}
+                  class="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm uppercase text-foreground outline-none focus:ring-2 focus:ring-ring/50" />
+              </label>
+            </div>
+
+            <label class="text-xs font-medium text-muted-foreground">
+              Tax category
+              <select name="taxCategory" class="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/50">
+                {taxOptions.map((t) => <option value={t} selected={(p?.taxCategory ?? 'saas') === t}>{t}</option>)}
+              </select>
+            </label>
+
+            <label class="text-xs font-medium text-muted-foreground">
+              Description <span class="font-normal">(optional)</span>
+              <textarea name="description" rows="2"
+                class="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/50">{p?.description ?? ''}</textarea>
+            </label>
+
+            <div class="mt-1 flex items-center justify-between gap-2">
+              <p class="text-xs text-muted-foreground">
+                {p ? `Current: ${money(p.priceCents, p.currency)}${p.active ? '' : ' · inactive'}` : 'Not created yet'}
+              </p>
+              <button type="submit" class="h-9 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.02] disabled:opacity-60">
+                Save &amp; sync
+              </button>
+            </div>
+          </form>
+        );
+      })}
+    </div>
+
+    <p class="mt-6 text-xs text-muted-foreground">
+      Saving creates the product in Dodo Payments and stores its id. The billing page and checkout use these synced products automatically — no product ids in <code>.env</code>.
+    </p>
+  </AccountShell>
+</Layout>
+
+<script>
+  import { toast } from '../../lib/toast';
+
+  document.querySelectorAll<HTMLFormElement>('.plan-form').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const interval = form.dataset.interval!;
+      const btn = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
+      const fd = new FormData(form);
+
+      const price = Number(fd.get('price'));
+      if (!Number.isFinite(price) || price <= 0) return toast.error('Enter a valid price');
+
+      const payload = {
+        interval,
+        name: String(fd.get('name') || '').trim(),
+        priceCents: Math.round(price * 100),
+        currency: String(fd.get('currency') || 'USD').toUpperCase(),
+        taxCategory: String(fd.get('taxCategory') || 'saas'),
+        description: String(fd.get('description') || '') || null,
+      };
+
+      btn.disabled = true;
+      const label = btn.textContent;
+      btn.textContent = 'Syncing…';
+      try {
+        const res = await fetch('/api/admin/plans', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = (await res.json()) as { ok?: boolean; error?: string; message?: string };
+        if (res.ok && data.ok) {
+          toast.success('Plan synced to Dodo', { log: 'Plan synced' });
+          setTimeout(() => location.reload(), 700);
+          return;
+        }
+        toast.error('Sync failed', { description: data.message || data.error || 'Please try again' });
+      } catch {
+        toast.error('Network error');
+      }
+      btn.disabled = false;
+      btn.textContent = label;
+    });
+  });
+</script>

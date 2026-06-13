@@ -26,9 +26,13 @@ model User {
   banReason  String?
   banExpires DateTime?
 
-  sessions Session[]
-  accounts Account[]
-  flags    ResourceFlag[]
+  // Dodo Payments customer id (set after first checkout; reused for later purchases)
+  dodoCustomerId String? @unique
+
+  sessions      Session[]
+  accounts      Account[]
+  flags         ResourceFlag[]
+  subscriptions Subscription[]
 
   @@map("user")
 }
@@ -80,6 +84,59 @@ model Verification {
   updatedAt  DateTime @updatedAt
 
   @@map("verification")
+}
+
+// Superadmin-authored subscription plan. Created in the app and synced to Dodo
+// Payments (a Dodo product is created via API and its id stored here). Checkout
+// reads the product id from this table — no product ids in env.
+model Plan {
+  id            String   @id @default(cuid())
+  // One Pro plan per billing interval keeps it aligned with the 2-plan model.
+  interval      String   @unique // 'monthly' | 'yearly'
+  name          String
+  description   String?  @db.Text
+  priceCents    Int // amount in the smallest currency unit (e.g. cents)
+  currency      String   @default("USD")
+  taxCategory   String   @default("saas") // Dodo tax_category: saas|digital_products|e_book|edtech
+  dodoProductId String?  @unique // set after a successful sync to Dodo
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("plan")
+}
+
+// Dodo Payments subscription mirror. Source of truth is Dodo; this table is
+// kept in sync via verified webhooks and read for plan/feature gating.
+model Subscription {
+  id                 String    @id @default(cuid())
+  userId             String
+  dodoSubscriptionId String    @unique
+  dodoCustomerId     String?
+  productId          String?
+  plan               String    @default("pro") // 'pro'
+  interval           String    @default("monthly") // 'monthly' | 'yearly'
+  // active | on_hold | cancelled | expired | failed | pending
+  status             String    @default("pending")
+  cancelAtPeriodEnd  Boolean   @default(false)
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("subscription")
+}
+
+// Idempotency ledger for incoming webhooks (keyed by Dodo's webhook-id header).
+// A row existing means the event was already processed — skip re-processing.
+model WebhookEvent {
+  id        String   @id // value of the `webhook-id` header
+  type      String
+  createdAt DateTime @default(now())
+
+  @@map("webhook_event")
 }
 
 // Custom: per-user, per-resource access flags toggled by a superadmin.

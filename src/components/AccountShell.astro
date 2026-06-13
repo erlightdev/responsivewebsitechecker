@@ -1,7 +1,7 @@
 ---
 // Shared shell for account-area pages (Account, Billing, Settings, Activity, Admin, Help).
 interface Props {
-  active: 'account' | 'billing' | 'settings' | 'activity' | 'admin' | 'help';
+  active: 'account' | 'billing' | 'settings' | 'activity' | 'admin' | 'plans' | 'help';
   heading: string;
   description?: string;
 }
@@ -18,7 +18,10 @@ const nav = [
   { id: 'billing', label: 'Billing', href: '/billing', icon: 'M2 5h20v14H2z M2 10h20' },
   { id: 'settings', label: 'Settings', href: '/settings', icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z' },
   { id: 'activity', label: 'Activity log', href: '/activity', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
-  ...(isSuper ? [{ id: 'admin', label: 'Admin', href: '/admin', icon: 'M12 2 4 5v6c0 5 3.4 7.7 8 9 4.6-1.3 8-4 8-9V5l-8-3z' }] : []),
+  ...(isSuper ? [
+    { id: 'admin', label: 'Admin', href: '/admin', icon: 'M12 2 4 5v6c0 5 3.4 7.7 8 9 4.6-1.3 8-4 8-9V5l-8-3z' },
+    { id: 'plans', label: 'Subscription plans', href: '/admin/plans', icon: 'M2 5h20v14H2z M2 10h20' },
+  ] : []),
   { id: 'help', label: 'Help & Support', href: '/help', icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 17h.01' },
 ];
 ---

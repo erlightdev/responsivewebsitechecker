@@ -2,6 +2,7 @@ import { defineMiddleware, sequence } from 'astro:middleware';
 import { fetchSite, errorPage, VPHOST } from './lib/proxy-core';
 import { auth } from './lib/auth';
 import { prisma } from './lib/prisma';
+import { isProUser } from './lib/payments/subscription';
 
 // 1) Reverse-proxy for the responsive checker. A proxied request is identified by
 // a `__vphost=<origin>` marker — either on the request itself (the document and
@@ -71,6 +72,9 @@ const isPublic = (p: string) =>
   PUBLIC_PATHS.has(p) ||
   p.startsWith('/api/auth') ||
   p === '/api/auth-method' ||
+  // Payments endpoints enforce their own auth: webhook verifies a signature,
+  // checkout requires a session inside the handler. Skip the redirect gate.
+  p.startsWith('/api/payments') ||
   p.startsWith('/_') ||
   p.startsWith('/favicon') ||
   /\.[a-z0-9]+$/i.test(p); // static assets
@@ -125,11 +129,12 @@ const authGate = defineMiddleware(async (context, next) => {
     return next();
   }
 
-  // Pro-only features (Social preview + Captures). Superadmin has full access;
-  // later this can also include paid plans. Everyone else is bounced back.
+  // Pro-only features (Social preview + Captures). Access for superadmin or an
+  // active paid Pro subscription; everyone else is bounced back.
   const PRO_PREFIXES = ['/social', '/captures'];
-  if (user.role !== 'superadmin' && PRO_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))) {
-    return context.redirect('/checker?error=pro');
+  if (PRO_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))) {
+    const entitled = user.role === 'superadmin' || (await isProUser(user.id));
+    if (!entitled) return context.redirect('/checker?error=pro');
   }
 
   // Per-resource restriction (superadmin bypasses all flags).

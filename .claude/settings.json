@@ -4,7 +4,29 @@
       "mcp__shadcn__get_project_registries",
       "Bash(xargs grep -l \"price\\\\|subscription\\\\|plan\\\\|tier\")",
       "Bash(xargs -0 grep -l \"Free\\\\|Pro\\\\|Business\\\\|Enterprise\\\\|price\\\\|tier\\\\|limit\")",
-      "Bash(xargs grep -i \"\\\\.price\\\\|\\\\.features\\\\|\\\\.plan\\\\|stripe\\\\|payment\\\\|billing\")"
+      "Bash(xargs grep -i \"\\\\.price\\\\|\\\\.features\\\\|\\\\.plan\\\\|stripe\\\\|payment\\\\|billing\")",
+      "WebFetch(domain:docs.dodopayments.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "PowerShell(npm install dodopayments 2>&1)",
+      "PowerShell(node -e \"const p=require\\('./node_modules/dodopayments/package.json'\\); console.log\\('dodopayments', p.version\\)\")",
+      "Bash(git check-ignore *)",
+      "PowerShell(npx prisma generate 2>&1)",
+      "PowerShell(node -e \"const D=require\\('dodopayments'\\); const c=new \\(D.default||D\\)\\({bearerToken:'x',environment:'test_mode'}\\); console.log\\('checkoutSessions:', !!c.checkoutSessions, '| create:', typeof c.checkoutSessions?.create\\); console.log\\('webhooks.unwrap:', typeof c.webhooks?.unwrap\\); console.log\\('subscriptions:', !!c.subscriptions\\);\")",
+      "Bash(find node_modules/dodopayments/resources -iname \"products*\" -maxdepth 2)",
+      "Bash(ls node_modules/dodopayments/resources/products*)",
+      "Bash(awk '/export interface ProductUpdateParams/,/^}/' node_modules/dodopayments/resources/products/products.d.ts)",
+      "PowerShell(npx prisma db push 2>&1)",
+      "PowerShell(npx prisma db push --accept-data-loss 2>&1)",
+      "PowerShell(Stop-Process -Id 27112 -Force)",
+      "PowerShell($env:FORCE_COLOR=0; Start-Process -FilePath \"npm\" -ArgumentList \"run\",\"dev\" -WorkingDirectory \"c:\\\\Users\\\\Admin\\\\Desktop\\\\responsive\\\\responsivewesbitechecker\" -WindowStyle Hidden; Start-Sleep -Seconds 6; \"started\")",
+      "Bash(awk '/interface RecurringPrice/,/^    }/' node_modules/dodopayments/resources/products/products.d.ts)",
+      "Bash(grep -vE \"^\\\\s*\\\\*|/\\\\*\\\\*|\\\\*/\")",
+      "Bash(node -e ' *)",
+      "Bash(awk '/^export interface Subscription /,/^}/' node_modules/dodopayments/resources/subscriptions.d.ts)",
+      "Bash(awk '/export interface PaymentListParams/,/^}/' node_modules/dodopayments/resources/payments.d.ts)",
+      "Bash(awk '/export interface PaymentListResponse /,/^}/' node_modules/dodopayments/resources/payments.d.ts)",
+      "Bash(curl -s \"http://localhost:4321/\")",
+      "Bash(grep -oE 'data-yearly=\"\\\\$[0-9]+\"|-50%|data-monthly=\"\\\\$[0-9]+\"')"
     ]
   }
 }

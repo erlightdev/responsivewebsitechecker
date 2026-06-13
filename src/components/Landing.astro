@@ -1,4 +1,11 @@
 ---
+import { getPublicPricing } from '../lib/payments/plan-store';
+
+const pricing = await getPublicPricing();
+const proMonthly = pricing.monthly?.amount ?? '$3';
+const proYearly = pricing.yearly?.amount ?? proMonthly;
+const proSavings = pricing.yearlySavingsPct;
+
 const nav = [
   { label: 'Features', href: '#features' },
   { label: 'How it works', href: '#how' },
@@ -64,8 +71,8 @@ const plans = [
   },
   {
     name: 'Pro',
-    monthly: { price: '$1', period: '/mo', note: 'Intro price for your first 3 months, then $3/mo.' },
-    yearly: { price: '$18', period: '/yr', note: "50% off your first year — just $1.50/mo, then $36/yr." },
+    monthly: { price: proMonthly, period: '/mo', note: '' },
+    yearly: { price: proYearly, period: pricing.yearly ? '/yr' : '/mo', note: proSavings > 0 ? `Save ${proSavings}% vs paying monthly.` : '' },
     blurb: 'For teams shipping every week.',
     features: [
       'Unlimited custom screens',
@@ -328,13 +335,15 @@ const faqs = [
       <p class="mt-4 text-muted-foreground">Start free. Upgrade when your team is ready. Cancel anytime.</p>
 
       <!-- Billing period toggle -->
-      <div class="mt-8 inline-flex items-center gap-1 rounded-full border border-border bg-card/50 p-1" id="billing-toggle" role="tablist" aria-label="Billing period">
-        <button type="button" data-period="monthly" class="billing-opt rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-primary text-primary-foreground" aria-selected="true">Monthly</button>
-        <button type="button" data-period="yearly" class="billing-opt inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground" aria-selected="false">
-          Yearly
-          <span class="rounded-full bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">-50%</span>
-        </button>
-      </div>
+      {pricing.yearly && (
+        <div class="mt-8 inline-flex items-center gap-1 rounded-full border border-border bg-card/50 p-1" id="billing-toggle" role="tablist" aria-label="Billing period">
+          <button type="button" data-period="monthly" class="billing-opt rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-primary text-primary-foreground" aria-selected="true">Monthly</button>
+          <button type="button" data-period="yearly" class="billing-opt inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground" aria-selected="false">
+            Yearly
+            {proSavings > 0 && <span class="rounded-full bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">-{proSavings}%</span>}
+          </button>
+        </div>
+      )}
     </div>
 
     <div class="mx-auto mt-14 grid max-w-3xl items-start gap-6 sm:grid-cols-2">
@@ -363,7 +372,7 @@ const faqs = [
             data-yearly={p.yearly.note}
             style={p.monthly.note ? '' : 'display:none'}
           >{p.monthly.note}</p>
-          <a href={p.featured ? '/signup?plan=pro' : '/signup'} data-href-monthly={p.featured ? '/signup?plan=pro' : '/signup'} data-href-yearly={p.featured ? '/signup?plan=pro&billing=yearly' : '/signup'} class={`plan-cta mt-6 block rounded-md px-4 py-2.5 text-center text-sm font-semibold transition-transform hover:scale-[1.02] ${p.featured ? 'bg-primary text-primary-foreground shadow-lg' : 'border border-border bg-background/50 hover:bg-muted'}`}>
+          <a href={p.featured ? `/signup?next=${encodeURIComponent('/billing?upgrade=pro')}` : '/signup'} data-href-monthly={p.featured ? `/signup?next=${encodeURIComponent('/billing?upgrade=pro')}` : '/signup'} data-href-yearly={p.featured ? `/signup?next=${encodeURIComponent('/billing?upgrade=pro&interval=yearly')}` : '/signup'} class={`plan-cta mt-6 block rounded-md px-4 py-2.5 text-center text-sm font-semibold transition-transform hover:scale-[1.02] ${p.featured ? 'bg-primary text-primary-foreground shadow-lg' : 'border border-border bg-background/50 hover:bg-muted'}`}>
             {p.cta}
           </a>
           <ul class="mt-6 space-y-3 text-sm">
