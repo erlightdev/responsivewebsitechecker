@@ -136,6 +136,15 @@ const injectedScrollbarStyle = `<style data-viewport-scrollbar>
   }
 </style>`;
 
+// Neutralise service-worker registration inside the framed page. A worker the
+// upstream tries to install would be scoped to OUR proxy origin — it could
+// intercept and cache requests for the real app, a security/correctness hazard —
+// and its script (a JS string literal, which we don't rewrite) 404s and spams the
+// console. Stub register() to a never-settling promise so the site's SW code
+// no-ops and its "registration failed" .catch never fires. Runs first in <head>,
+// before the app bundle.
+const injectedHeadScript = `<script data-viewport-proxy-sw>(function(){try{var s=navigator&&navigator.serviceWorker;if(s){s.register=function(){return new Promise(function(){})};if(s.getRegistration)s.getRegistration=function(){return Promise.resolve()};if(s.getRegistrations)s.getRegistrations=function(){return Promise.resolve([])}}}catch(e){}})();</script>`;
+
 /** Map a same-origin absolute URL to a path-mirroring proxy URL. */
 function proxied(abs: string): string {
   try {
@@ -196,12 +205,12 @@ function rewriteHtml(html: string, base: string): string {
   html = html.replace(/<meta[^>]+name=["']?referrer["']?[^>]*>/gi, '');
   const referrerMeta = '<meta name="referrer" content="unsafe-url">';
   if (/<head[^>]*>/i.test(html)) {
-    html = html.replace(/<head[^>]*>/i, (m) => m + referrerMeta);
+    html = html.replace(/<head[^>]*>/i, (m) => `${m}${injectedHeadScript}${referrerMeta}`);
     html = /<\/head>/i.test(html)
-      ? html.replace(/<\/head>/i, injectedScrollbarStyle + '</head>')
+      ? html.replace(/<\/head>/i, `${injectedScrollbarStyle}</head>`)
       : html + injectedScrollbarStyle;
   } else {
-    html = referrerMeta + injectedScrollbarStyle + html;
+    html = injectedHeadScript + referrerMeta + injectedScrollbarStyle + html;
   }
 
   // srcset: rewrite each candidate URL, preserve descriptors.
