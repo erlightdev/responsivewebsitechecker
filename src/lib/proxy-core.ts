@@ -28,6 +28,16 @@ const STRIP_RES_HEADERS = new Set([
   'connection',
   'keep-alive',
   'set-cookie', // handled separately: re-scoped + namespaced, see rescopeCookies
+  // Caching/revalidation headers from the upstream must never reach a shared CDN
+  // (Vercel's edge): the proxied URL isn't a stable static asset, and a single
+  // transient upstream 404 forwarded with `immutable` would get frozen at the
+  // edge and served to everyone. We set our own `cache-control` below instead.
+  'cache-control',
+  'etag',
+  'expires',
+  'last-modified',
+  'age',
+  'pragma',
 ]);
 
 const UA =
@@ -274,6 +284,11 @@ async function build(target: string, opts: FetchOpts = {}): Promise<ProxyEntry> 
   // Allow framing only from our own origin.
   headers['x-frame-options'] = 'SAMEORIGIN';
   headers['content-security-policy'] = "frame-ancestors 'self'";
+  // Keep proxied responses out of any shared/CDN cache. The browser may still
+  // cache successful subresources for the session; errors are never stored, so a
+  // transient upstream failure can't get frozen and re-served.
+  headers['cache-control'] =
+    upstream.status >= 400 ? 'no-store' : 'private, max-age=0, must-revalidate';
 
   const base = upstream.url || target;
   let body: Uint8Array;
@@ -285,7 +300,6 @@ async function build(target: string, opts: FetchOpts = {}): Promise<ProxyEntry> 
     body = enc(rewriteCss(await upstream.text(), base));
   } else {
     body = new Uint8Array(await upstream.arrayBuffer());
-    if (!headers['cache-control']) headers['cache-control'] = 'public, max-age=300';
   }
 
   return { status: upstream.status, headers, body, expires: Date.now() + TTL_MS, setCookie };
