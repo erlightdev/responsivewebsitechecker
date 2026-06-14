@@ -291,9 +291,10 @@ async function build(target: string, opts: FetchOpts = {}): Promise<ProxyEntry> 
     upstream.status >= 400 ? 'no-store' : 'private, max-age=0, must-revalidate';
 
   const base = upstream.url || target;
+  const isHtml = ct.includes('text/html');
   let body: Uint8Array;
 
-  if (ct.includes('text/html')) {
+  if (isHtml) {
     body = enc(rewriteHtml(await upstream.text(), base));
     headers['content-type'] = 'text/html; charset=utf-8';
   } else if (ct.includes('css')) {
@@ -302,7 +303,17 @@ async function build(target: string, opts: FetchOpts = {}): Promise<ProxyEntry> 
     body = new Uint8Array(await upstream.arrayBuffer());
   }
 
-  return { status: upstream.status, headers, body, expires: Date.now() + TTL_MS, setCookie };
+  // Some hosts (regional CDN/cache skew, misconfigured SPA backends) serve a
+  // subresource's real bytes but with an error status. Browsers discard module
+  // scripts and stylesheets that arrive non-2xx, even when the body is valid,
+  // which leaves the framed SPA blank. For a visual testing proxy we'd rather
+  // render: if a non-HTML resource came back with a body but an error status,
+  // normalise it to 200. The HTML document keeps its true status so real
+  // navigation / SPA routing isn't masked.
+  const status =
+    !isHtml && upstream.status >= 400 && body.byteLength > 0 ? 200 : upstream.status;
+
+  return { status, headers, body, expires: Date.now() + TTL_MS, setCookie };
 }
 
 /**
