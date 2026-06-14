@@ -189,7 +189,7 @@ function rewriteHtml(html: string, base: string): string {
   // into CORS mode.
   html = html.replace(/<base\b[^>]*>/gi, '');
   html = html.replace(/\s+integrity\s*=\s*("|')[^"']*\1/gi, '');
-  html = html.replace(/\s+crossorigin(\s*=\s*("|')[^"']*\2)?/gi, '');
+  
   html = html.replace(/<html\b(?![^>]*\bdata-viewport-proxy-scrollbars\b)([^>]*)>/i, '<html data-viewport-proxy-scrollbars$1>');
 
   // Force a full-URL referer so JS-created subresources carry __vphost.
@@ -284,6 +284,7 @@ async function build(target: string, opts: FetchOpts = {}): Promise<ProxyEntry> 
   // Allow framing only from our own origin.
   headers['x-frame-options'] = 'SAMEORIGIN';
   headers['content-security-policy'] = "frame-ancestors 'self'";
+  headers['Access-Control-Allow-Origin'] = '*';
   // Keep proxied responses out of any shared/CDN cache. The browser may still
   // cache successful subresources for the session; errors are never stored, so a
   // transient upstream failure can't get frozen and re-served.

@@ -12,7 +12,7 @@
     "astro": "astro",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": ""
   },
   "dependencies": {
     "@astrojs/node": "^10.1.4",
