@@ -145,6 +145,25 @@ const injectedScrollbarStyle = `<style data-viewport-scrollbar>
 // before the app bundle.
 const injectedHeadScript = `<script data-viewport-proxy-sw>(function(){try{var s=navigator&&navigator.serviceWorker;if(s){s.register=function(){return new Promise(function(){})};if(s.getRegistration)s.getRegistration=function(){return Promise.resolve()};if(s.getRegistrations)s.getRegistrations=function(){return Promise.resolve([])}}}catch(e){}})();</script>`;
 
+// The __vphost marker rides in the document URL's query string; the proxy reads
+// it (directly, or off the Referer) to know which upstream a same-origin request
+// belongs to. SPA routers rewrite the URL via history.pushState/replaceState on
+// load and navigation — which would strip the marker, after which every resource
+// the app injects at runtime (images, fetches) sends a markerless Referer and
+// 404s. Patch both methods, before the app bundle runs, to re-stamp the marker
+// onto any same-origin URL that's missing it. Keeps location.search carrying the
+// marker so the Referer fallback always resolves, for whatever origin (http/https,
+// www/apex) the document was loaded with. No URL arg → location unchanged → skip.
+const injectedHistoryScript = `<script data-viewport-proxy-hist>(function(){try{
+var MARK=${JSON.stringify(VPHOST)};
+function keep(url){try{var want=new URLSearchParams(location.search).get(MARK);if(!want)return url;
+if(url==null)return url;var u=new URL(url,location.href);if(u.origin!==location.origin)return url;
+if(!u.searchParams.get(MARK))u.searchParams.set(MARK,want);return u.pathname+u.search+u.hash;}catch(e){return url;}}
+var p=history.pushState,r=history.replaceState;
+history.pushState=function(s,t,u){return p.call(this,s,t,arguments.length>2?keep(u):u);};
+history.replaceState=function(s,t,u){return r.call(this,s,t,arguments.length>2?keep(u):u);};
+}catch(e){}})();</script>`;
+
 // Same-origin links a proxied SPA builds at runtime never pass through the HTML
 // rewriter above, so they point at our origin WITHOUT the __vphost marker: the
 // hovered URL looks wrong and opening one in a new tab (no Referer to fall back
@@ -229,7 +248,7 @@ function rewriteHtml(html: string, base: string): string {
   // Force a full-URL referer so JS-created subresources carry __vphost.
   html = html.replace(/<meta[^>]+name=["']?referrer["']?[^>]*>/gi, '');
   const referrerMeta = '<meta name="referrer" content="unsafe-url">';
-  const earlyHead = injectedHeadScript + injectedNavScript(baseOrigin);
+  const earlyHead = injectedHeadScript + injectedHistoryScript + injectedNavScript(baseOrigin);
   if (/<head[^>]*>/i.test(html)) {
     html = html.replace(/<head[^>]*>/i, (m) => `${m}${earlyHead}${referrerMeta}`);
     html = /<\/head>/i.test(html)
