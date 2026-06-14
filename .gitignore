@@ -25,3 +25,4 @@ src/generated/
 
 # jetbrains setting folder
 .idea/
+docs/DEPLOY_VERCEL.md

@@ -10,8 +10,16 @@ import { isProUser } from './lib/payments/subscription';
 // SPA bundle inserting `<img src="/assets/logo.png">`), on the Referer. The
 // request path mirrors the real path, so we just recombine it with the origin.
 // Our own app never sets the marker, so its requests fall straight through.
+// Vite/Astro dev-server internals (`/@id/…`, `/@vite/…`, `/@fs/…`, HMR client).
+// These must always be served by the dev server, never proxied — when a proxied
+// page is in the iframe its `referer` carries __vphost, which would otherwise
+// make us fetch the dev-toolbar module from the remote origin (corrupted MIME).
+const isDevInternal = (p: string) => p.startsWith('/@') || p.startsWith('/node_modules/');
+
 const proxy = defineMiddleware(async ({ request }, next) => {
   const url = new URL(request.url);
+  if (isDevInternal(url.pathname)) return next();
+
   const own = url.searchParams.get(VPHOST);
 
   let originRaw = own;
