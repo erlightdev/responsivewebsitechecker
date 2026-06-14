@@ -20,6 +20,11 @@ const proxy = defineMiddleware(async ({ request }, next) => {
   const url = new URL(request.url);
   if (isDevInternal(url.pathname)) return next();
 
+  // Cloudflare injects RUM/analytics beacons that POST to /cdn-cgi/* with no
+  // __vphost marker, so they 404 against our origin and spam the console.
+  // They only exist on Cloudflare's edge — swallow them silently.
+  if (url.pathname.startsWith('/cdn-cgi/')) return new Response(null, { status: 204 });
+
   const own = url.searchParams.get(VPHOST);
 
   let originRaw = own;
