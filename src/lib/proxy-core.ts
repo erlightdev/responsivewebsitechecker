@@ -10,6 +10,13 @@
 
 export const VPHOST = '__vphost';
 
+// Proxied upstream cookies are stored on OUR origin (the response comes from us).
+// To stop them colliding with the app's own cookies — Better-Auth session,
+// `vp_ref`, etc. — and to avoid leaking those app cookies back to the third-party
+// upstream, every upstream cookie name is prefixed with this on the way out and
+// the prefix is stripped (and everything else dropped) on the way back in.
+const COOKIE_PREFIX = '__vp_';
+
 const STRIP_RES_HEADERS = new Set([
   'x-frame-options',
   'content-security-policy',
@@ -20,7 +27,7 @@ const STRIP_RES_HEADERS = new Set([
   'content-length', // wrong once we rewrite / decompress the body
   'connection',
   'keep-alive',
-  'set-cookie',
+  'set-cookie', // handled separately: re-scoped + namespaced, see rescopeCookies
 ]);
 
 const UA =
@@ -36,7 +43,51 @@ export type ProxyEntry = {
   headers: Record<string, string>;
   body: Uint8Array;
   expires: number;
+  // Set-Cookie values (re-scoped + namespaced) to forward to the browser. Kept
+  // out of `headers` because there can be several and they must not be cached.
+  setCookie?: string[];
 };
+
+export type FetchOpts = {
+  method?: string;
+  cookie?: string | null; // already-extracted upstream cookies (see extractProxyCookies)
+  body?: Uint8Array | null;
+  contentType?: string | null;
+};
+
+/**
+ * From the browser's Cookie header, pick only the cookies we previously set for
+ * a proxied upstream (the `__vp_`-prefixed ones), strip the prefix, and rebuild
+ * a Cookie string to send upstream. App cookies (Better-Auth, vp_ref) are left
+ * behind so they never reach the third-party site.
+ */
+export function extractProxyCookies(cookieHeader: string | null | undefined): string | null {
+  if (!cookieHeader) return null;
+  const out: string[] = [];
+  for (const part of cookieHeader.split(';')) {
+    const seg = part.trim();
+    const eq = seg.indexOf('=');
+    if (eq <= 0) continue;
+    const name = seg.slice(0, eq);
+    if (name.startsWith(COOKIE_PREFIX)) {
+      out.push(`${name.slice(COOKIE_PREFIX.length)}=${seg.slice(eq + 1)}`);
+    }
+  }
+  return out.length ? out.join('; ') : null;
+}
+
+/**
+ * Turn upstream Set-Cookie headers into values safe to set on our origin: drop
+ * the `Domain` attribute (so the cookie binds to our proxy host) and namespace
+ * the cookie name with `COOKIE_PREFIX`.
+ */
+function rescopeCookies(headers: Headers): string[] {
+  const getSetCookie = (headers as { getSetCookie?: () => string[] }).getSetCookie;
+  const raw = typeof getSetCookie === 'function'
+    ? getSetCookie.call(headers)
+    : (headers.get('set-cookie') ? [headers.get('set-cookie') as string] : []);
+  return raw.map((c) => `${COOKIE_PREFIX}${c.replace(/;\s*domain=[^;]*/gi, '')}`);
+}
 
 const cache = new Map<string, ProxyEntry>();
 const inflight = new Map<string, Promise<ProxyEntry>>();
@@ -175,15 +226,45 @@ function rewriteHtml(html: string, base: string): string {
   return rewriteCssUrls(html, base, baseOrigin);
 }
 
-async function build(target: string): Promise<ProxyEntry> {
+async function build(target: string, opts: FetchOpts = {}): Promise<ProxyEntry> {
+  const method = (opts.method ?? 'GET').toUpperCase();
+  const reqHeaders: Record<string, string> = {
+    'User-Agent': UA,
+    Accept: 'text/html,application/xhtml+xml,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+  if (opts.cookie) reqHeaders.Cookie = opts.cookie;
+  if (opts.contentType) reqHeaders['Content-Type'] = opts.contentType;
+
   const upstream = await fetch(target, {
-    headers: {
-      'User-Agent': UA,
-      Accept: 'text/html,application/xhtml+xml,image/avif,image/webp,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-    redirect: 'follow',
+    method,
+    headers: reqHeaders,
+    body: method === 'GET' || method === 'HEAD' ? undefined : (opts.body as BodyInit | undefined) ?? undefined,
+    // Manual: login flows answer with a 3xx + Set-Cookie. `follow` would swallow
+    // the cookie on the intermediate hop, so we re-emit the redirect ourselves
+    // (Location rewritten through the proxy) and let the browser store the cookie.
+    redirect: 'manual',
   });
+
+  const setCookie = rescopeCookies(upstream.headers);
+
+  // Re-emit redirects through the proxy so the iframe never leaves our origin.
+  if (upstream.status >= 300 && upstream.status < 400 && upstream.headers.has('location')) {
+    const loc = upstream.headers.get('location') as string;
+    let location = loc;
+    try {
+      location = proxied(new URL(loc, target).href);
+    } catch {
+      /* unparseable Location — pass through untouched */
+    }
+    return {
+      status: upstream.status,
+      headers: { location, 'cache-control': 'no-store' },
+      body: new Uint8Array(),
+      expires: 0,
+      setCookie,
+    };
+  }
 
   const ct = upstream.headers.get('content-type') ?? '';
   const headers: Record<string, string> = {};
@@ -207,23 +288,32 @@ async function build(target: string): Promise<ProxyEntry> {
     if (!headers['cache-control']) headers['cache-control'] = 'public, max-age=300';
   }
 
-  return { status: upstream.status, headers, body, expires: Date.now() + TTL_MS };
+  return { status: upstream.status, headers, body, expires: Date.now() + TTL_MS, setCookie };
 }
 
 /**
  * Fetch + transform an upstream URL, served from an in-memory TTL cache.
  * Concurrent requests for the same URL share a single upstream fetch.
+ *
+ * Only plain GETs with no forwarded cookie are cacheable — anything carrying a
+ * session, or any non-GET, is fetched fresh and never shared (its response is
+ * user-specific and may carry Set-Cookie).
  */
-export function fetchSite(target: string): Promise<ProxyEntry> {
+export function fetchSite(target: string, opts: FetchOpts = {}): Promise<ProxyEntry> {
+  const method = (opts.method ?? 'GET').toUpperCase();
+  const cacheable = method === 'GET' && !opts.cookie;
+  if (!cacheable) return build(target, opts);
+
   const hit = cache.get(target);
   if (hit && hit.expires > Date.now()) return Promise.resolve(hit);
 
   const pending = inflight.get(target);
   if (pending) return pending;
 
-  const p = build(target)
+  const p = build(target, opts)
     .then((entry) => {
-      if (entry.status < 400 && entry.body.byteLength <= MAX_CACHE_BYTES) {
+      // Never cache a response that sets cookies — it's session-establishing.
+      if (entry.status < 400 && !entry.setCookie?.length && entry.body.byteLength <= MAX_CACHE_BYTES) {
         cache.set(target, entry);
         if (cache.size > MAX_ENTRIES) {
           const oldest = cache.keys().next().value;

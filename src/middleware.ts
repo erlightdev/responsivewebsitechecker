@@ -1,5 +1,5 @@
 import { defineMiddleware, sequence } from 'astro:middleware';
-import { fetchSite, errorPage, VPHOST } from './lib/proxy-core';
+import { fetchSite, errorPage, extractProxyCookies, VPHOST } from './lib/proxy-core';
 import { auth } from './lib/auth';
 import { prisma } from './lib/prisma';
 import { isProUser } from './lib/payments/subscription';
@@ -11,8 +11,6 @@ import { isProUser } from './lib/payments/subscription';
 // request path mirrors the real path, so we just recombine it with the origin.
 // Our own app never sets the marker, so its requests fall straight through.
 const proxy = defineMiddleware(async ({ request }, next) => {
-  if (request.method !== 'GET') return next();
-
   const url = new URL(request.url);
   const own = url.searchParams.get(VPHOST);
 
@@ -43,9 +41,25 @@ const proxy = defineMiddleware(async ({ request }, next) => {
   const qs = params.toString();
   const target = origin + url.pathname + (qs ? `?${qs}` : '');
 
+  const method = request.method;
+  // Forward the request body for form submissions / API calls (e.g. a login POST).
+  const body =
+    method === 'GET' || method === 'HEAD'
+      ? null
+      : new Uint8Array(await request.arrayBuffer());
+
   try {
-    const entry = await fetchSite(target);
-    return new Response(entry.body, { status: entry.status, headers: entry.headers });
+    const entry = await fetchSite(target, {
+      method,
+      // Only the upstream's own (namespaced) cookies are forwarded — the app's
+      // session cookies are filtered out so they never reach the third party.
+      cookie: extractProxyCookies(request.headers.get('cookie')),
+      body,
+      contentType: request.headers.get('content-type'),
+    });
+    const headers = new Headers(entry.headers);
+    for (const c of entry.setCookie ?? []) headers.append('set-cookie', c);
+    return new Response(entry.body as BodyInit, { status: entry.status, headers });
   } catch (e) {
     // Only the document/subresource we explicitly proxied gets an error page;
     // referer-only guesses just fall through to a normal 404.
