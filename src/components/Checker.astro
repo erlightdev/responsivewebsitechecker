@@ -101,7 +101,7 @@ const canUsePro = hasPro;
       </button>
     </form>
 
-    <!-- Clear cache (fixed rose tint, theme-independent) -->
+    <!-- Clear cache -->
     <button type="button" id="clear-cache" class="tip grid size-9 shrink-0 place-items-center rounded-md border border-rose-500/40 bg-rose-500/5 text-rose-500 transition-colors hover:bg-rose-500/15 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300" aria-label="Clear cache and soft-reload all devices" data-tip="Clear cache & reload">
       <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v6c0 1.66-4 3-9 3s-9-1.34-9-3V5"/><path d="M21 11v6c0 1.66-4 3-9 3s-9-1.34-9-3v-6"/></svg>
     </button>
@@ -632,7 +632,19 @@ const canUsePro = hasPro;
   import { toast } from '../lib/toast';
   import { signOut } from '../lib/auth-client';
 
-  // ---------- state ----------
+  // ---------- DOM Utilities ----------
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const $$ = <T extends HTMLElement>(sel: string, root: ParentNode = document) => Array.from(root.querySelectorAll<T>(sel));
+
+  // ---------- Safe Storage ----------
+  const safeStore = {
+    get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
+    set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch {} },
+    remove: (k: string) => { try { localStorage.removeItem(k); } catch {} },
+    clearKeys: (prefix: string) => { try { Object.keys(localStorage).forEach(k => k.startsWith(prefix) && localStorage.removeItem(k)); } catch {} }
+  };
+
+  // ---------- State ----------
   type Device = { id: string; name: string; w: number; h: number; type: string; rotated: boolean };
   type Layout = 'row' | 'grid';
 
@@ -642,13 +654,12 @@ const canUsePro = hasPro;
   let framesOn = true;
   let customCount = 0;
   const active = new Map<string, Device>();
-  const customScreens = new Map<string, Device>(); // user-defined screen definitions
+  const customScreens = new Map<string, Device>();
   type PageMeta = { url: string; title: string; pageName: string; updatedAt: number };
   let latestPageMeta: PageMeta | null = null;
 
-  // ---------- elements ----------
-  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-  const form = $('url-form') as unknown as HTMLFormElement;
+  // ---------- Elements ----------
+  const form = $('url-form') as HTMLFormElement;
   const input = $<HTMLInputElement>('url-input');
   const clearBtn = $('clear-btn');
   const frames = $('frames');
@@ -658,36 +669,29 @@ const canUsePro = hasPro;
   const sidebar = $('sidebar');
   const backdrop = $('sidebar-backdrop');
 
-  // ---------- active-screen limit (guest 3 / free 6 / pro unlimited) ----------
+  // ---------- Tier limits ----------
   const root = document.querySelector<HTMLElement>('[data-max-screens]');
-  const MAX_SCREENS = Number(root?.dataset.maxScreens) || Infinity; // 0/NaN → unlimited
+  const MAX_SCREENS = Number(root?.dataset.maxScreens) || Infinity;
   const SCREEN_TIER = root?.dataset.screenTier || 'guest';
+  const CAN_PRO = root?.dataset.canPro === 'true';
 
   function limitMessage() {
-    if (SCREEN_TIER === 'guest')
-      return { msg: `Free preview is limited to ${MAX_SCREENS} screens`, desc: 'Sign up free to use up to 6.' };
+    if (SCREEN_TIER === 'guest') return { msg: `Free preview is limited to ${MAX_SCREENS} screens`, desc: 'Sign up free to use up to 6.' };
     return { msg: `Your plan is limited to ${MAX_SCREENS} screens`, desc: 'Upgrade to Pro for unlimited screens.' };
   }
-  // Returns true if another screen may be added; otherwise warns and returns false.
   function canAddScreen(): boolean {
     if (active.size < MAX_SCREENS) return true;
     const { msg, desc } = limitMessage();
     toast.warning(msg, { description: desc, log: false });
     return false;
   }
-
-  // ---------- Pro gating (Social preview + Capture) ----------
-  const CAN_PRO = root?.dataset.canPro === 'true';
   function proToast(feature: string) {
     toast.warning(`${feature} is a Pro feature`, {
-      description: SCREEN_TIER === 'guest' ? 'Sign up and upgrade to Pro to unlock.' : 'Upgrade to Pro to unlock.',
-      log: false,
+      description: SCREEN_TIER === 'guest' ? 'Sign up and upgrade to Pro to unlock.' : 'Upgrade to Pro to unlock.', log: false
     });
   }
 
-  // ---------- Guest promo (Pro $1/mo intro) ----------
-  // A floating offer for guests: surfaces every minute, dismissable, and opens
-  // the plans modal on click. Dismissing only hides it until the next interval.
+  // ---------- Guest promo ----------
   if (SCREEN_TIER === 'guest') {
     const promo = $('promo-cta');
     const plansModal = $('plans-modal');
@@ -717,31 +721,21 @@ const canUsePro = hasPro;
       plansOpen = false;
       plansOverlay.classList.add('opacity-0');
       plansPanel.classList.add('scale-95', 'opacity-0');
-      // After the dialog fades out, hide it and bring the chip back smoothly.
-      setTimeout(() => {
-        plansModal.classList.replace('flex', 'hidden');
-        showPromo();
-      }, 200);
+      setTimeout(() => { plansModal.classList.replace('flex', 'hidden'); showPromo(); }, 200);
     };
 
     $('promo-open').addEventListener('click', openPlans);
     $('promo-dismiss').addEventListener('click', hidePromo);
     $('plans-close').addEventListener('click', closePlans);
     $('plans-overlay').addEventListener('click', closePlans);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && plansOpen) closePlans();
-    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && plansOpen) closePlans(); });
 
-    // First nudge shortly after load, then every minute while the modal is closed.
     setTimeout(showPromo, 8000);
-    setInterval(() => {
-      if (!plansModal.classList.contains('flex')) showPromo();
-    }, 60000);
+    setInterval(() => { if (!plansModal.classList.contains('flex')) showPromo(); }, 60000);
   }
 
-  // Saved-workspace limit: guests can't save, free tier saves 2, pro unlimited.
+  // Workspace tier logic
   const MAX_WORKSPACES = SCREEN_TIER === 'pro' ? Infinity : SCREEN_TIER === 'free' ? 2 : 0;
-  // Returns true if a new workspace may be saved; otherwise warns and returns false.
   function canSaveWorkspace(currentCount: number): boolean {
     if (MAX_WORKSPACES === 0) {
       toast.warning('Saving workspaces needs an account', { description: 'Sign up free to save up to 2 workspaces.', log: false });
@@ -754,42 +748,22 @@ const canUsePro = hasPro;
     return true;
   }
 
-  // ---------- persistence ----------
+  // ---------- Persistence ----------
   type VPState = { url?: string; layout: Layout; zoom: number | 'fit'; framesOn?: boolean; devices: Device[]; customScreens?: Device[] };
 
-  // A snapshot of everything that makes up the current arrangement.
   function snapshot(): VPState {
-    return {
-      url: currentUrl,
-      layout,
-      zoom,
-      framesOn,
-      devices: [...active.values()],
-      customScreens: [...customScreens.values()],
-    };
+    return { url: currentUrl, layout, zoom, framesOn, devices: [...active.values()], customScreens: [...customScreens.values()] };
   }
-
   const store = {
-    save() {
-      try {
-        localStorage.setItem('vp-state', JSON.stringify(snapshot()));
-      } catch { /* private mode etc. */ }
-    },
-    load() {
-      try {
-        const raw = localStorage.getItem('vp-state');
-        if (!raw) return null;
-        return JSON.parse(raw) as VPState;
-      } catch {
-        return null;
-      }
-    },
+    save: () => safeStore.set('vp-state', JSON.stringify(snapshot())),
+    load: (): VPState | null => {
+      const raw = safeStore.get('vp-state');
+      try { return raw ? JSON.parse(raw) : null; } catch { return null; }
+    }
   };
 
-  // ---------- init devices ----------
-  const trackCustomCount = (id: string) => {
-    if (id.startsWith('custom-')) customCount = Math.max(customCount, Number(id.split('-')[1]) || 0);
-  };
+  // Init state
+  const trackCustomCount = (id: string) => { if (id.startsWith('custom-')) customCount = Math.max(customCount, Number(id.split('-')[1]) || 0); };
   const saved = store.load();
   if (saved) {
     if (saved.url) currentUrl = saved.url;
@@ -798,246 +772,114 @@ const canUsePro = hasPro;
     framesOn = saved.framesOn !== false;
     saved.customScreens?.forEach((d) => { customScreens.set(d.id, d); trackCustomCount(d.id); });
   }
+
   if (saved?.devices?.length) {
     saved.devices.forEach((d) => {
       active.set(d.id, d);
       trackCustomCount(d.id);
-      // migrate older saves where custom devices weren't tracked separately
       if (d.id.startsWith('custom-') && !customScreens.has(d.id)) customScreens.set(d.id, { ...d, rotated: false });
     });
   } else if (!saved) {
-    document.querySelectorAll<HTMLButtonElement>('.device-row[data-on="true"]').forEach((row) => {
+    $$<HTMLButtonElement>('.device-row[data-on="true"]').forEach((row) => {
       active.set(row.dataset.id!, {
-        id: row.dataset.id!,
-        name: row.dataset.name!,
-        w: Number(row.dataset.w),
-        h: Number(row.dataset.h),
-        type: row.dataset.type!,
-        rotated: false,
+        id: row.dataset.id!, name: row.dataset.name!, w: Number(row.dataset.w), h: Number(row.dataset.h),
+        type: row.dataset.type!, rotated: false,
       });
     });
   }
-  // Enforce the active-screen cap on whatever we restored (saved state may carry
-  // more than this tier allows — e.g. a signed-out browser with a prior session).
-  if (active.size > MAX_SCREENS) {
-    [...active.keys()].slice(MAX_SCREENS).forEach((id) => active.delete(id));
-  }
-  // sync built-in sidebar checkmarks with state (custom rows are built later)
-  document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) => {
-    row.dataset.on = String(active.has(row.dataset.id!));
-  });
 
-  // ---------- helpers ----------
-  // Treat anything that isn't a plausible URL as a web search, the way a browser
-  // address bar does. Routed through the proxy like any other site.
-  function searchUrl(q: string): string {
-    return 'https://www.google.com/search?q=' + encodeURIComponent(q);
+  if (active.size > MAX_SCREENS) [...active.keys()].slice(MAX_SCREENS).forEach(id => active.delete(id));
+  
+  function syncDeviceRows() {
+    $$<HTMLElement>('.device-row', sidebar).forEach(row => { row.dataset.on = String(active.has(row.dataset.id!)); });
   }
+  syncDeviceRows();
 
-  // Parse the address box like a browser omnibox: accept bare domains, full
-  // http/https URLs, www-prefixed hosts, localhost, IPs and explicit ports —
-  // adding https:// (or http:// for local hosts) when no scheme is typed.
-  // Anything without a recognisable host (a phrase, a single word) becomes a
-  // web search. Returns a loadable URL, or null only for empty input.
+  // ---------- Helpers ----------
+  function searchUrl(q: string) { return 'https://www.google.com/search?q=' + encodeURIComponent(q); }
   function normalizeUrl(raw: string): string | null {
     const v = raw.trim().replace(/^["']+|["']+$/g, '').trim();
     if (!v) return null;
-
-    // Explicit http/https → normalise and use directly.
-    if (/^https?:\/\//i.test(v)) {
-      try { return new URL(v).href; } catch { return searchUrl(v); }
-    }
-    // Any other explicit scheme (mailto:, file:, ftp:, javascript:…) can't be
-    // previewed in a frame — hand it to search.
+    if (/^https?:\/\//i.test(v)) { try { return new URL(v).href; } catch { return searchUrl(v); } }
     if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return searchUrl(v);
-
-    // No scheme: does it look like a host? (a dotted TLD, localhost, or an IPv4,
-    // and no spaces). Otherwise it's a search query.
     const host = v.split(/[/?#]/)[0];
-    const looksLikeHost =
-      !/\s/.test(v) &&
-      (/\.[a-z]{2,}([:/?#]|$)/i.test(v) ||
-        /^localhost([:/?#]|$)/i.test(v) ||
-        /^\d{1,3}(\.\d{1,3}){3}([:/?#]|$)/.test(v));
+    const looksLikeHost = !/\s/.test(v) && (/\.[a-z]{2,}([:/?#]|$)/i.test(v) || /^localhost([:/?#]|$)/i.test(v) || /^\d{1,3}(\.\d{1,3}){3}([:/?#]|$)/.test(v));
     if (!looksLikeHost) return searchUrl(v);
-
     const isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)([:/?#]|$)/i.test(host);
-    try {
-      return new URL((isLocal ? 'http://' : 'https://') + v).href;
-    } catch {
-      return searchUrl(v);
-    }
+    try { return new URL((isLocal ? 'http://' : 'https://') + v).href; } catch { return searchUrl(v); }
   }
 
-  function fitScale(w: number): number {
-    if (w <= 500) return 0.72; // phones
-    if (w <= 1100) return 0.48; // tablets
-    return 0.36; // laptops / desktops
+  const scaleFor = (w: number) => zoom === 'fit' ? (w <= 500 ? 0.72 : w <= 1100 ? 0.48 : 0.36) : zoom;
+  const escapeHtml = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+
+  function titleCase(s: string) { return s.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase()); }
+  function websiteName(u: string) {
+    try { const p = new URL(u).hostname.replace(/^www\./i, '').split('.'); return titleCase(p.length > 2 ? p[p.length - 2] : p[0] || u); } catch { return 'Website'; }
   }
-  const scaleFor = (w: number) => (zoom === 'fit' ? fitScale(w) : zoom);
-
-  const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-
-  function titleCase(s: string): string {
-    return s
-      .replace(/[-_]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+  function pageNameFromUrl(u: string) {
+    try { const l = new URL(u).pathname.split('/').filter(Boolean).pop(); return l ? titleCase(decodeURIComponent(l)) : 'Home'; } catch { return 'Page'; }
   }
-
-  function websiteName(u: string): string {
-    try {
-      const host = new URL(u).hostname.replace(/^www\./i, '');
-      const parts = host.split('.');
-      const name = parts.length > 2 ? parts[parts.length - 2] : parts[0];
-      return titleCase(name || host);
-    } catch {
-      return 'Website';
-    }
-  }
-
-  function pageNameFromUrl(u: string): string {
-    try {
-      const url = new URL(u);
-      const last = url.pathname.split('/').filter(Boolean).pop();
-      return last ? titleCase(decodeURIComponent(last)) : 'Home';
-    } catch {
-      return 'Page';
-    }
-  }
-
-  function cleanPageTitle(raw: string, siteName: string): string {
-    const title = raw.replace(/\s+/g, ' ').trim();
-    if (!title) return '';
-    const parts = title.split(/\s[-|•:]\s/).map((part) => part.trim()).filter(Boolean);
-    const withoutSite = parts.find((part) => part.toLowerCase() !== siteName.toLowerCase());
-    return withoutSite || title;
-  }
-
-  function formatCaptureTitle(): string {
+  function formatCaptureTitle() {
     const url = latestPageMeta?.url || currentUrl;
-    const site = websiteName(url);
-    const page = latestPageMeta?.pageName || pageNameFromUrl(url);
+    const site = websiteName(url), page = latestPageMeta?.pageName || pageNameFromUrl(url);
     return page && page.toLowerCase() !== site.toLowerCase() ? `${site} - ${page}` : site;
   }
-
-  function visitedUrlFromFrame(iframe: HTMLIFrameElement): string {
+  function toProxy(raw: string, bust?: number) {
     try {
-      const loc = iframe.contentWindow?.location;
-      if (!loc) return currentUrl;
-      const params = new URLSearchParams(loc.search);
-      const origin = params.get('__vphost');
-      if (!origin) return currentUrl;
-      params.delete('__vphost');
-      params.delete('__cb');
-      const qs = params.toString();
-      return `${origin}${loc.pathname}${qs ? `?${qs}` : ''}${loc.hash}`;
-    } catch {
-      return currentUrl;
-    }
-  }
-
-  function updatePageMetaFromFrame(iframe: HTMLIFrameElement) {
-    const url = visitedUrlFromFrame(iframe);
-    const site = websiteName(url);
-    let pageName = pageNameFromUrl(url);
-    try {
-      const title = cleanPageTitle(iframe.contentDocument?.title || '', site);
-      if (title) pageName = title;
-    } catch { /* cross-origin or blocked frame */ }
-    latestPageMeta = { url, title: `${site} - ${pageName}`, pageName, updatedAt: Date.now() };
-  }
-
-  function attachFrameTracking(iframe: HTMLIFrameElement) {
-    updatePageMetaFromFrame(iframe);
-  }
-
-  // Build a same-origin proxy URL whose path mirrors the target's, so SPA
-  // routers (which branch on location.pathname) see the real route. The target
-  // origin rides along in a __vphost marker the proxy middleware reads.
-  // `bust` forces a fresh upstream fetch (bypasses the proxy's TTL cache) by
-  // making the request URL unique — used by "Clear cache".
-  function toProxy(raw: string, bust?: number): string {
-    try {
-      const u = new URL(raw);
-      const params = new URLSearchParams(u.search);
+      const u = new URL(raw), params = new URLSearchParams(u.search);
       params.set('__vphost', u.origin);
       if (bust) params.set('__cb', String(bust));
       return `${u.pathname}?${params.toString()}${u.hash}`;
-    } catch {
-      return raw;
-    }
+    } catch { return raw; }
   }
 
-  // ---------- pane rendering ----------
+  function visitedUrlFromFrame(iframe: HTMLIFrameElement) {
+    try {
+      const loc = iframe.contentWindow?.location; if (!loc) return currentUrl;
+      const params = new URLSearchParams(loc.search), origin = params.get('__vphost'); if (!origin) return currentUrl;
+      params.delete('__vphost'); params.delete('__cb');
+      const qs = params.toString();
+      return `${origin}${loc.pathname}${qs ? `?${qs}` : ''}${loc.hash}`;
+    } catch { return currentUrl; }
+  }
+
+  function updatePageMetaFromFrame(iframe: HTMLIFrameElement) {
+    const url = visitedUrlFromFrame(iframe), site = websiteName(url);
+    let pageName = pageNameFromUrl(url);
+    try {
+      const t = (iframe.contentDocument?.title || '').replace(/\s+/g, ' ').trim();
+      const parts = t.split(/\s[-|•:]\s/).map(p => p.trim()).filter(Boolean);
+      pageName = parts.find(p => p.toLowerCase() !== site.toLowerCase()) || t || pageName;
+    } catch {}
+    latestPageMeta = { url, title: `${site} - ${pageName}`, pageName, updatedAt: Date.now() };
+  }
+
+  // ---------- Frame Management ----------
   function pane(d: Device): HTMLElement {
-    const w = d.rotated ? d.h : d.w;
-    const h = d.rotated ? d.w : d.h;
-    const s = scaleFor(w);
-    const sw = Math.round(w * s);
-    const sh = Math.round(h * s);
-    const name = escapeHtml(d.name);
+    const w = d.rotated ? d.h : d.w, h = d.rotated ? d.w : d.h, s = scaleFor(w);
+    const sw = Math.round(w * s), sh = Math.round(h * s), name = escapeHtml(d.name);
 
     const el = document.createElement('div');
     el.className = 'flex shrink-0 flex-col';
     el.dataset.frameId = d.id;
 
-    // screen = overlays + iframe; skin differs per device type
     const screen = `
       <div class="relative overflow-hidden bg-card" data-role="screen" style="width:${sw}px;height:${sh}px">
         <div data-role="loader" class="absolute inset-0 z-10 grid place-items-center bg-card">
           <div class="size-6 animate-spin rounded-full border-2 border-muted border-t-primary"></div>
         </div>
-        <iframe
-          title="${name} preview"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-          loading="lazy"
-          style="width:${w}px;height:${h}px;transform:scale(${s});transform-origin:top left;border:0"
-        ></iframe>
-      </div>
-    `;
+        <iframe title="${name} preview" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" loading="lazy" style="width:${w}px;height:${h}px;transform:scale(${s});transform-origin:top left;border:0"></iframe>
+      </div>`;
 
-    let skin: string;
-    if (!framesOn) {
-      // bare screen — no device chrome
-      skin = `<div class="overflow-hidden rounded-md border border-border/70 shadow-lg">${screen}</div>`;
-    } else if (d.type === 'phone') {
-      skin = `
-        <div class="rounded-[2rem] border border-border/70 bg-neutral-950 p-2 ${d.rotated ? 'pl-5' : 'pt-5'} shadow-2xl dark:bg-black">
-          ${d.rotated
-            ? '<div class="absolute left-2 top-1/2 h-12 w-1 -translate-y-1/2 rounded-full bg-neutral-800"></div>'
-            : '<div class="absolute left-1/2 top-2 h-1 w-12 -translate-x-1/2 rounded-full bg-neutral-800"></div>'}
-          <div class="overflow-hidden rounded-[1.4rem]">${screen}</div>
-        </div>
-      `;
-    } else if (d.type === 'tablet') {
-      skin = `
-        <div class="rounded-[1.4rem] border border-border/70 bg-neutral-950 p-2.5 shadow-2xl dark:bg-black">
-          <div class="overflow-hidden rounded-[0.9rem]">${screen}</div>
-        </div>
-      `;
-    } else {
-      // browser chrome for laptop / desktop / custom
-      skin = `
-        <div class="overflow-hidden rounded-lg border border-border/70 bg-card shadow-2xl">
-          <div class="flex items-center gap-2 border-b border-border/60 bg-muted/40 px-3 py-1.5">
-            <span class="flex gap-1.5">
-              <span class="size-2.5 rounded-full bg-destructive/60"></span>
-              <span class="size-2.5 rounded-full bg-chart-3/60"></span>
-              <span class="size-2.5 rounded-full bg-primary/60"></span>
-            </span>
-            <span data-role="chrome-url" class="min-w-0 flex-1 truncate rounded bg-background/70 px-2 py-0.5 text-[10px] text-muted-foreground"></span>
-          </div>
-          ${screen}
-        </div>
-      `;
-    }
+    const skin = !framesOn ? `<div class="overflow-hidden rounded-md border border-border/70 shadow-lg">${screen}</div>`
+      : d.type === 'phone' ? `<div class="rounded-[2rem] border border-border/70 bg-neutral-950 p-2 ${d.rotated ? 'pl-5' : 'pt-5'} shadow-2xl dark:bg-black">${d.rotated ? '<div class="absolute left-2 top-1/2 h-12 w-1 -translate-y-1/2 rounded-full bg-neutral-800"></div>' : '<div class="absolute left-1/2 top-2 h-1 w-12 -translate-x-1/2 rounded-full bg-neutral-800"></div>'}<div class="overflow-hidden rounded-[1.4rem]">${screen}</div></div>`
+      : d.type === 'tablet' ? `<div class="rounded-[1.4rem] border border-border/70 bg-neutral-950 p-2.5 shadow-2xl dark:bg-black"><div class="overflow-hidden rounded-[0.9rem]">${screen}</div></div>`
+      : `<div class="overflow-hidden rounded-lg border border-border/70 bg-card shadow-2xl"><div class="flex items-center gap-2 border-b border-border/60 bg-muted/40 px-3 py-1.5"><span class="flex gap-1.5"><span class="size-2.5 rounded-full bg-destructive/60"></span><span class="size-2.5 rounded-full bg-chart-3/60"></span><span class="size-2.5 rounded-full bg-primary/60"></span></span><span data-role="chrome-url" class="min-w-0 flex-1 truncate rounded bg-background/70 px-2 py-0.5 text-[10px] text-muted-foreground">${currentUrl.replace(/^https?:\/\//, '')}</span></div>${screen}</div>`;
 
     el.innerHTML = `
       <div class="mb-2 flex items-center justify-between gap-2 px-0.5" style="width:${sw + (!framesOn || d.type === 'desktop' ? 2 : 20)}px">
         <div class="flex min-w-0 items-center gap-1.5">
-          <button type="button" data-action="drag" class="tip drag-handle grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Drag to reorder ${name}" data-tip="Drag to reorder" data-tip-align="start">
+          <button type="button" data-action="drag" class="tip drag-handle grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Drag" data-tip="Drag to reorder" data-tip-align="start">
             <svg class="size-3.5" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
           </button>
           <div class="min-w-0">
@@ -1046,132 +888,135 @@ const canUsePro = hasPro;
           </div>
         </div>
         <div class="flex shrink-0 items-center gap-0.5">
-          <button type="button" data-action="rotate" class="tip grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Rotate ${name}" data-tip="Rotate">
-            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v6h-6"/></svg>
-          </button>
-          <button type="button" data-action="reload" class="tip grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Reload ${name}" data-tip="Reload">
-            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
-          </button>
-          <a data-action="open" href="${escapeHtml(currentUrl)}" target="_blank" rel="noopener noreferrer" class="tip grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Open ${name} in new tab" data-tip="Open in new tab">
-            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-          </a>
-          <button type="button" data-action="close" class="tip grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Remove ${name}" data-tip="Remove" data-tip-align="end">
-            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
+          <button type="button" data-action="rotate" class="tip grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Rotate" data-tip="Rotate"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v6h-6"/></svg></button>
+          <button type="button" data-action="reload" class="tip grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Reload" data-tip="Reload"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
+          <a href="${escapeHtml(currentUrl)}" target="_blank" rel="noopener noreferrer" class="tip grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Open" data-tip="Open in new tab"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>
+          <button type="button" data-action="close" class="tip grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Remove" data-tip="Remove" data-tip-align="end"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
       </div>
-      <div class="relative">${skin}</div>
-    `;
+      <div class="relative">${skin}</div>`;
 
     const iframe = el.querySelector('iframe')!;
     const loader = el.querySelector<HTMLElement>('[data-role="loader"]')!;
-    const chromeUrl = el.querySelector<HTMLElement>('[data-role="chrome-url"]');
-    if (chromeUrl) chromeUrl.textContent = currentUrl.replace(/^https?:\/\//, '');
-
-    iframe.addEventListener('load', () => {
-      loader.style.display = 'none';
-      attachFrameTracking(iframe);
-    });
-    const startLoad = (bust?: number) => {
-      loader.style.display = 'grid';
-      iframe.src = toProxy(currentUrl, bust);
-    };
-    startLoad();
-    // expose an in-place reload so navbar "Clear cache" can refresh this pane
-    // without rebuilding it (keeps device/zoom/rotation state intact)
-    (el as unknown as { __reload: (bust?: number) => void }).__reload = startLoad;
-
-    el.querySelector('[data-action="reload"]')!.addEventListener('click', () => startLoad());
-    el.querySelector('[data-action="rotate"]')!.addEventListener('click', () => {
-      d.rotated = !d.rotated;
-      el.replaceWith(pane(d));
-      store.save();
-    });
-    el.querySelector('[data-action="close"]')!.addEventListener('click', () => {
-      removeDevice(d.id);
-    });
-
-    // ----- drag to reorder (only when grabbing the handle) -----
-    const handle = el.querySelector<HTMLElement>('[data-action="drag"]')!;
-    handle.addEventListener('mousedown', () => {
-      el.setAttribute('draggable', 'true');
-      const off = () => { el.removeAttribute('draggable'); window.removeEventListener('mouseup', off); };
-      window.addEventListener('mouseup', off);
-    });
-    el.addEventListener('dragstart', (e) => {
-      el.classList.add('dragging');
-      frames.classList.add('dragging-active');
-      e.dataTransfer!.effectAllowed = 'move';
-      e.dataTransfer!.setData('text/plain', d.id);
-    });
-    el.addEventListener('dragend', () => {
-      el.classList.remove('dragging');
-      frames.classList.remove('dragging-active');
-      el.removeAttribute('draggable');
-      persistOrder();
-    });
+    iframe.addEventListener('load', () => { loader.style.display = 'none'; updatePageMetaFromFrame(iframe); });
+    
+    loader.style.display = 'grid';
+    iframe.src = toProxy(currentUrl);
 
     return el;
   }
 
-  // Recompute `active` order from the DOM and persist.
+  // Frame Action Delegation
+  frames.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
+    if (!btn) return;
+    const paneEl = btn.closest<HTMLElement>('[data-frame-id]');
+    if (!paneEl) return;
+    
+    const id = paneEl.dataset.frameId!;
+    const action = btn.dataset.action;
+    
+    if (action === 'close') removeDevice(id);
+    else if (action === 'rotate') {
+      const d = active.get(id);
+      if (d) { d.rotated = !d.rotated; store.save(); paneEl.replaceWith(pane(d)); }
+    }
+    else if (action === 'reload') {
+      const loader = paneEl.querySelector<HTMLElement>('[data-role="loader"]');
+      const iframe = paneEl.querySelector('iframe');
+      if (loader && iframe) { loader.style.display = 'grid'; iframe.src = toProxy(currentUrl, Date.now()); }
+    }
+  });
+
+  // Recompute `active` order from the DOM
   function persistOrder() {
-    const ordered = [...frames.querySelectorAll<HTMLElement>('[data-frame-id]')]
-      .map((el) => el.dataset.frameId!)
-      .filter((id) => active.has(id))
-      .map((id) => [id, active.get(id)!] as const);
+    const ordered = $$<HTMLElement>('[data-frame-id]', frames).map(el => el.dataset.frameId!).filter(id => active.has(id)).map(id => [id, active.get(id)!] as const);
     active.clear();
     ordered.forEach(([id, dev]) => active.set(id, dev));
     store.save();
   }
 
-  // Find where to drop relative to the nearest pane (works for row + grid).
-  function dragTarget(x: number, y: number) {
-    const els = [...frames.querySelectorAll<HTMLElement>('[data-frame-id]:not(.dragging)')];
-    let best: { dist: number; el: HTMLElement; after: boolean } | null = null;
-    for (const child of els) {
-      const b = child.getBoundingClientRect();
-      const cx = b.left + b.width / 2;
-      const cy = b.top + b.height / 2;
-      const dist = Math.hypot(x - cx, y - cy);
-      if (!best || dist < best.dist) {
-        const after = layout === 'grid'
-          ? (y > b.bottom ? true : y < b.top ? false : x > cx)
-          : x > cx;
-        best = { dist, el: child, after };
+  // Drag and Drop reordering
+  let dragCache: { box: DOMRect, el: HTMLElement }[] = [];
+  
+  frames.addEventListener('mousedown', (e) => {
+    const handle = (e.target as HTMLElement).closest('.drag-handle');
+    if (handle) {
+      const p = handle.closest('[data-frame-id]');
+      if (p) {
+        p.setAttribute('draggable', 'true');
+        const off = () => { p.removeAttribute('draggable'); window.removeEventListener('mouseup', off); };
+        window.addEventListener('mouseup', off);
       }
     }
-    return best;
+  });
+
+  frames.addEventListener('dragstart', (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.classList.contains('flex')) return;
+    target.classList.add('dragging');
+    frames.classList.add('dragging-active');
+    e.dataTransfer!.effectAllowed = 'move';
+    e.dataTransfer!.setData('text/plain', target.dataset.frameId!);
+    dragCache = $$<HTMLElement>('[data-frame-id]:not(.dragging)', frames).map(el => ({ box: el.getBoundingClientRect(), el }));
+  });
+
+  frames.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = 'move';
+    const dragging = frames.querySelector('.dragging');
+    if (!dragging) return;
+    
+    const x = e.clientX, y = e.clientY;
+    let best = null;
+    for (const item of dragCache) {
+      const cx = item.box.left + item.box.width / 2, cy = item.box.top + item.box.height / 2, dist = Math.hypot(x - cx, y - cy);
+      if (!best || dist < best.dist) {
+        best = { dist, el: item.el, after: layout === 'grid' ? (y > item.box.bottom ? true : y < item.box.top ? false : x > cx) : x > cx };
+      }
+    }
+    
+    if (!best) frames.appendChild(dragging);
+    else if (best.after) best.el.after(dragging);
+    else best.el.before(dragging);
+  });
+
+  frames.addEventListener('dragend', (e) => {
+    const target = e.target as HTMLElement;
+    target.classList.remove('dragging');
+    frames.classList.remove('dragging-active');
+    target.removeAttribute('draggable');
+    dragCache = [];
+    persistOrder();
+  });
+
+  // ---------- Canvas Core ----------
+  function clearFrames() {
+    $$('iframe', frames).forEach((f: any) => f.src = 'about:blank');
+    frames.innerHTML = '';
   }
 
-  // ---------- canvas ----------
   function applyLayout() {
-    frames.className =
-      layout === 'row'
-        ? 'flex w-max min-w-full items-start gap-10 px-8 py-7'
-        : 'flex flex-wrap items-start justify-center gap-10 px-8 py-7';
-    document.querySelectorAll<HTMLButtonElement>('.layout-btn').forEach((b) => {
-      b.dataset.on = String(b.dataset.layout === layout);
-    });
+    frames.className = layout === 'row' ? 'flex w-max min-w-full items-start gap-10 px-8 py-7' : 'flex flex-wrap items-start justify-center gap-10 px-8 py-7';
+    $$<HTMLButtonElement>('.layout-btn').forEach(b => b.dataset.on = String(b.dataset.layout === layout));
   }
+
+  function updateCount() { deviceCount.textContent = String(active.size); }
 
   function renderAll() {
     if (!currentUrl) return;
-    frames.innerHTML = '';
-    active.forEach((d) => frames.appendChild(pane(d)));
+    clearFrames();
+    const frag = document.createDocumentFragment();
+    active.forEach(d => frag.appendChild(pane(d)));
+    frames.appendChild(frag);
     emptyState.style.display = 'none';
     applyLayout();
     updateCount();
   }
 
-  function updateCount() {
-    deviceCount.textContent = String(active.size);
-  }
-
   function addDevice(d: Device) {
     active.set(d.id, d);
-    const row = document.querySelector<HTMLElement>(`.device-row[data-id="${d.id}"]`);
-    if (row) row.dataset.on = 'true';
+    syncDeviceRows();
     if (currentUrl) frames.appendChild(pane(d));
     updateCount();
     store.save();
@@ -1179,691 +1024,321 @@ const canUsePro = hasPro;
 
   function removeDevice(id: string) {
     active.delete(id);
-    const row = document.querySelector<HTMLElement>(`.device-row[data-id="${id}"]`);
-    if (row) row.dataset.on = 'false';
+    syncDeviceRows();
     frames.querySelector(`[data-frame-id="${id}"]`)?.remove();
     updateCount();
     store.save();
   }
 
-  // ---------- events ----------
+  // ---------- Events ----------
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const url = normalizeUrl(input.value);
-    if (!url) {
-      input.focus();
-      input.classList.add('text-destructive');
-      setTimeout(() => input.classList.remove('text-destructive'), 1200);
-      return;
-    }
-    currentUrl = url;
-    latestPageMeta = null;
-    input.value = url;
-    clearBtn.style.display = 'block';
-    closeSidebar();
-    renderAll();
-    store.save();
+    if (!url) { input.focus(); input.classList.add('text-destructive'); setTimeout(() => input.classList.remove('text-destructive'), 1200); return; }
+    currentUrl = url; latestPageMeta = null; input.value = url;
+    clearBtn.style.display = 'block'; closeSidebar(); renderAll(); store.save();
   });
 
-  input.addEventListener('input', () => {
-    clearBtn.style.display = input.value ? 'block' : 'none';
-  });
+  input.addEventListener('input', () => { clearBtn.style.display = input.value ? 'block' : 'none'; });
   clearBtn.addEventListener('click', () => {
-    input.value = '';
-    currentUrl = '';
-    latestPageMeta = null;
-    frames.innerHTML = '';
-    emptyState.style.display = 'flex';
-    clearBtn.style.display = 'none';
-    input.focus();
-    store.save();
+    input.value = ''; currentUrl = ''; latestPageMeta = null;
+    clearFrames(); emptyState.style.display = 'flex'; clearBtn.style.display = 'none'; input.focus(); store.save();
   });
 
-  document.querySelectorAll<HTMLButtonElement>('.sample-url').forEach((b) =>
-    b.addEventListener('click', () => {
-      input.value = b.dataset.url!;
-      form.requestSubmit();
-    })
-  );
+  $$<HTMLButtonElement>('.sample-url').forEach(b => b.addEventListener('click', () => { input.value = b.dataset.url!; form.requestSubmit(); }));
 
-  // toggle a device on/off from its sidebar row (built-in or custom)
   function toggleRow(row: HTMLElement) {
     const id = row.dataset.id!;
-    if (active.has(id)) {
-      removeDevice(id);
-    } else {
-      if (!canAddScreen()) return;
-      addDevice({
-        id,
-        name: row.dataset.name!,
-        w: Number(row.dataset.w),
-        h: Number(row.dataset.h),
-        type: row.dataset.type!,
-        rotated: false,
-      });
-    }
+    if (active.has(id)) removeDevice(id);
+    else if (canAddScreen()) addDevice({ id, name: row.dataset.name!, w: Number(row.dataset.w), h: Number(row.dataset.h), type: row.dataset.type!, rotated: false });
   }
 
-  // sidebar device rows (built-in)
-  document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) =>
-    row.addEventListener('click', () => toggleRow(row))
-  );
+  // Sidebar Device Delegation
+  sidebar.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const delBtn = target.closest('.custom-del');
+    if (delBtn) {
+      const id = delBtn.closest('.device-row')?.dataset.id;
+      if (id) promptDeleteScreen(id);
+      return;
+    }
+    const row = target.closest('.device-row') as HTMLElement | null;
+    if (row) toggleRow(row);
+  });
+  sidebar.addEventListener('keydown', (e) => {
+    const row = (e.target as HTMLElement).closest('.device-row') as HTMLElement | null;
+    if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleRow(row); }
+  });
 
-  // ---------- custom screens ----------
+  // ---------- Custom Screens ----------
   const customList = $('custom-list');
   const customGroup = $('custom-group');
-
   const typeForWidth = (w: number) => (w <= 500 ? 'phone' : w <= 1100 ? 'tablet' : 'desktop');
 
-  function syncCustomGroup() {
-    customGroup.style.display = customScreens.size ? 'block' : 'none';
-  }
-
-  // Build + insert a sidebar row for a custom screen definition.
+  function syncCustomGroup() { customGroup.style.display = customScreens.size ? 'block' : 'none'; }
   function insertCustomRow(d: Device) {
-    const name = escapeHtml(d.name);
     const li = document.createElement('li');
     li.dataset.customId = d.id;
-    li.innerHTML = `
-      <div class="device-row group flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-muted"
-        role="button" tabindex="0"
-        data-id="${d.id}" data-name="${name}" data-w="${d.w}" data-h="${d.h}" data-type="${d.type}" data-on="${String(active.has(d.id))}">
-        <span class="grid size-4 shrink-0 place-items-center rounded border border-border transition-colors group-data-[on=true]:border-primary group-data-[on=true]:bg-primary">
-          <svg class="size-3 text-primary-foreground opacity-0 transition-opacity group-data-[on=true]:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        </span>
-        <span class="min-w-0 flex-1 truncate">${name}</span>
-        <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${d.w}×${d.h}</span>
-        <button type="button" class="custom-del grid size-5 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100" aria-label="Delete ${name}" title="Delete screen">
-          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-        </button>
-      </div>`;
-    const row = li.querySelector<HTMLElement>('.device-row')!;
-    const del = li.querySelector<HTMLButtonElement>('.custom-del')!;
-    row.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('.custom-del')) return;
-      toggleRow(row);
-    });
-    row.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRow(row); }
-    });
-    del.addEventListener('click', (e) => { e.stopPropagation(); promptDeleteScreen(d.id); });
+    li.innerHTML = `<div class="device-row group flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-muted" role="button" tabindex="0" data-id="${d.id}" data-name="${escapeHtml(d.name)}" data-w="${d.w}" data-h="${d.h}" data-type="${d.type}" data-on="${String(active.has(d.id))}"><span class="grid size-4 shrink-0 place-items-center rounded border border-border transition-colors group-data-[on=true]:border-primary group-data-[on=true]:bg-primary"><svg class="size-3 text-primary-foreground opacity-0 transition-opacity group-data-[on=true]:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="min-w-0 flex-1 truncate">${escapeHtml(d.name)}</span><span class="shrink-0 text-xs tabular-nums text-muted-foreground">${d.w}×${d.h}</span><button type="button" class="custom-del grid size-5 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100" aria-label="Delete" title="Delete screen"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></div>`;
     customList.appendChild(li);
     syncCustomGroup();
   }
-
   function deleteCustomScreen(id: string) {
     const name = customScreens.get(id)?.name ?? 'Screen';
     if (active.has(id)) removeDevice(id);
     customScreens.delete(id);
     customList.querySelector(`li[data-custom-id="${id}"]`)?.remove();
-    syncCustomGroup();
-    store.save();
-    toast.success('Screen deleted', { description: name, log: 'Screen deleted' });
+    syncCustomGroup(); store.save(); toast.success('Screen deleted', { description: name, log: 'Screen deleted' });
   }
-
   function addCustomScreen(name: string, w: number, h: number) {
     if (!canAddScreen()) return;
     customCount += 1;
-    const d: Device = {
-      id: `custom-${customCount}`,
-      name: name.trim() || `Custom ${w}×${h}`,
-      w, h,
-      type: typeForWidth(w),
-      rotated: false,
-    };
+    const d: Device = { id: `custom-${customCount}`, name: name.trim() || `Custom ${w}×${h}`, w, h, type: typeForWidth(w), rotated: false };
     customScreens.set(d.id, d);
-    insertCustomRow(d);
-    addDevice(d); // activate + render + persist
+    insertCustomRow(d); addDevice(d);
     toast.success('Screen added', { description: `${d.name} · ${d.w}×${d.h}`, log: 'Screen added' });
   }
 
-  // ---------- Add Screen modal ----------
-  const modal = $('screen-modal');
-  const nameEl = $<HTMLInputElement>('screen-name');
-  const wEl = $<HTMLInputElement>('screen-w');
-  const hEl = $<HTMLInputElement>('screen-h');
-  const errEl = $('screen-error');
+  // ---------- Modals (Add, Delete) ----------
+  const modal = $('screen-modal'), nameEl = $<HTMLInputElement>('screen-name'), wEl = $<HTMLInputElement>('screen-w'), hEl = $<HTMLInputElement>('screen-h'), errEl = $('screen-error');
+  function openModal() { nameEl.value = ''; wEl.value = ''; hEl.value = ''; errEl.style.display = 'none'; modal.style.display = 'flex'; setTimeout(() => nameEl.focus(), 0); }
+  function closeModal() { modal.style.display = 'none'; }
+  $('add-screen').addEventListener('click', openModal); $('screen-cancel').addEventListener('click', closeModal); $('screen-modal-close').addEventListener('click', closeModal); $('screen-modal-overlay').addEventListener('click', closeModal);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.style.display === 'flex') closeModal(); });
 
-  function openModal() {
-    nameEl.value = '';
-    wEl.value = '';
-    hEl.value = '';
-    errEl.style.display = 'none';
-    modal.style.display = 'flex';
-    setTimeout(() => nameEl.focus(), 0);
-  }
-  function closeModal() {
-    modal.style.display = 'none';
-  }
-
-  $('add-screen').addEventListener('click', openModal);
-  $('screen-cancel').addEventListener('click', closeModal);
-  $('screen-modal-close').addEventListener('click', closeModal);
-  $('screen-modal-overlay').addEventListener('click', closeModal);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+  ($('screen-form') as HTMLFormElement).addEventListener('submit', (e) => {
+    e.preventDefault(); const w = Number(wEl.value), h = Number(hEl.value);
+    if (!w || !h || w < 200 || w > 3840 || h < 200 || h > 3840) return (errEl.style.display = 'block');
+    addCustomScreen(nameEl.value, w, h); closeModal();
   });
 
-  ($('screen-form') as unknown as HTMLFormElement).addEventListener('submit', (e) => {
-    e.preventDefault();
-    const w = Number(wEl.value);
-    const h = Number(hEl.value);
-    if (!w || !h || w < 200 || w > 3840 || h < 200 || h > 3840) {
-      errEl.style.display = 'block';
-      return;
-    }
-    addCustomScreen(nameEl.value, w, h);
-    closeModal();
-  });
-
-  // ---------- Delete confirmation modal ----------
-  const deleteModal = $('delete-modal');
-  const deleteNameEl = $('delete-modal-name');
+  const deleteModal = $('delete-modal'), deleteNameEl = $('delete-modal-name');
   let pendingDeleteId: string | null = null;
-
   function promptDeleteScreen(id: string) {
-    pendingDeleteId = id;
-    deleteNameEl.textContent = customScreens.get(id)?.name ?? 'This screen';
-    deleteModal.style.display = 'flex';
-    setTimeout(() => $('delete-cancel').focus(), 0);
+    pendingDeleteId = id; deleteNameEl.textContent = customScreens.get(id)?.name ?? 'This screen';
+    deleteModal.style.display = 'flex'; setTimeout(() => $('delete-cancel').focus(), 0);
   }
-  function closeDeleteModal() {
-    deleteModal.style.display = 'none';
-    pendingDeleteId = null;
-  }
+  function closeDeleteModal() { deleteModal.style.display = 'none'; pendingDeleteId = null; }
+  $('delete-cancel').addEventListener('click', closeDeleteModal); $('delete-modal-overlay').addEventListener('click', closeDeleteModal);
+  $('delete-confirm').addEventListener('click', () => { if (pendingDeleteId) deleteCustomScreen(pendingDeleteId); closeDeleteModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && deleteModal.style.display === 'flex') closeDeleteModal(); });
 
-  $('delete-cancel').addEventListener('click', closeDeleteModal);
-  $('delete-modal-overlay').addEventListener('click', closeDeleteModal);
-  $('delete-confirm').addEventListener('click', () => {
-    if (pendingDeleteId) deleteCustomScreen(pendingDeleteId);
-    closeDeleteModal();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && deleteModal.style.display === 'flex') closeDeleteModal();
-  });
-
-  // layout
-  document.querySelectorAll<HTMLButtonElement>('.layout-btn').forEach((b) =>
-    b.addEventListener('click', () => {
-      layout = (b.dataset.layout as Layout) ?? 'row';
-      applyLayout();
-      store.save();
-    })
-  );
-
-  // zoom
+  // Layout / Zoom / Settings
+  $$<HTMLButtonElement>('.layout-btn').forEach(b => b.addEventListener('click', () => { layout = (b.dataset.layout as Layout) ?? 'row'; applyLayout(); store.save(); }));
   const ZOOMS = [0.25, 0.36, 0.5, 0.65, 0.8, 1];
-  function setZoom(z: number | 'fit') {
-    zoom = z;
-    zoomLabel.textContent = z === 'fit' ? 'Fit' : `${Math.round(z * 100)}%`;
-    store.save();
-    renderAll();
-  }
+  function setZoom(z: number | 'fit') { zoom = z; zoomLabel.textContent = z === 'fit' ? 'Fit' : `${Math.round(z * 100)}%`; store.save(); renderAll(); }
   zoomLabel.addEventListener('click', () => setZoom('fit'));
-  document.querySelectorAll<HTMLButtonElement>('[data-zoom-step]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const dir = Number(b.dataset.zoomStep);
-      const cur = zoom === 'fit' ? 0.5 : zoom;
-      const idx = ZOOMS.findIndex((z) => z >= cur - 0.001);
-      const next = ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, (idx === -1 ? 2 : idx) + dir))];
-      setZoom(next);
-    })
-  );
+  $$<HTMLButtonElement>('[data-zoom-step]').forEach(b => b.addEventListener('click', () => {
+    const dir = Number(b.dataset.zoomStep), cur = zoom === 'fit' ? 0.5 : zoom, idx = ZOOMS.findIndex(z => z >= cur - 0.001);
+    setZoom(ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, (idx === -1 ? 2 : idx) + dir))]);
+  }));
 
-  // device frame toggle
   const frameToggle = $('frame-toggle');
-  function syncFrameToggle() {
-    frameToggle.dataset.on = String(framesOn);
-    frameToggle.setAttribute('aria-pressed', String(framesOn));
-  }
-  frameToggle.addEventListener('click', () => {
-    framesOn = !framesOn;
-    syncFrameToggle();
-    store.save();
-    renderAll();
-  });
-
-  // rotate / reload all
-  $('rotate-all').addEventListener('click', () => {
-    active.forEach((d) => (d.rotated = !d.rotated));
-    store.save();
-    renderAll();
-  });
+  function syncFrameToggle() { frameToggle.dataset.on = String(framesOn); frameToggle.setAttribute('aria-pressed', String(framesOn)); }
+  frameToggle.addEventListener('click', () => { framesOn = !framesOn; syncFrameToggle(); store.save(); renderAll(); });
+  $('rotate-all').addEventListener('click', () => { active.forEach(d => (d.rotated = !d.rotated)); store.save(); renderAll(); });
   $('reload-all').addEventListener('click', renderAll);
 
-  // clear cache + soft reload — refresh every pane in place with a fresh
-  // upstream fetch, keeping device/zoom/rotation state untouched. One shared
-  // token means the proxy de-dupes to a single upstream hit per URL.
   $('clear-cache').addEventListener('click', () => {
-    if (!currentUrl) {
-      toast.warning('Nothing to reload', { description: 'Load a URL first.', log: false });
-      return;
-    }
+    if (!currentUrl) return toast.warning('Nothing to reload', { description: 'Load a URL first.', log: false });
     const token = Date.now();
-    const panes = frames.querySelectorAll<HTMLElement>('[data-frame-id]');
-    panes.forEach((el) =>
-      (el as unknown as { __reload?: (bust?: number) => void }).__reload?.(token)
-    );
-    toast.info('Cache cleared', { description: `Reloaded ${panes.length} screen${panes.length === 1 ? '' : 's'}.`, log: 'Cache cleared' });
+    const panes = $$<HTMLElement>('[data-frame-id]', frames);
+    panes.forEach(pane => {
+      const loader = pane.querySelector<HTMLElement>('[data-role="loader"]');
+      const iframe = pane.querySelector('iframe');
+      if (loader && iframe) { loader.style.display = 'grid'; iframe.src = toProxy(currentUrl, token); }
+    });
+    toast.info('Cache cleared', { description: `Reloaded ${panes.length} screen(s).`, log: 'Cache cleared' });
   });
 
-  // live reorder while dragging a pane over the canvas
-  frames.addEventListener('dragover', (e) => {
-    const dragging = frames.querySelector<HTMLElement>('.dragging');
-    if (!dragging) return;
-    e.preventDefault();
-    e.dataTransfer!.dropEffect = 'move';
-    const t = dragTarget(e.clientX, e.clientY);
-    if (!t) { frames.appendChild(dragging); return; }
-    if (t.after) frames.insertBefore(dragging, t.el.nextSibling);
-    else frames.insertBefore(dragging, t.el);
-  });
-  frames.addEventListener('drop', (e) => e.preventDefault());
-
-  // sidebar — drawer on mobile, collapse on desktop
+  // Sidebar toggle
   const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
-
-  function closeSidebar() {
-    sidebar.dataset.open = 'false';
-    backdrop.style.display = 'none';
-  }
+  function closeSidebar() { sidebar.dataset.open = 'false'; backdrop.style.display = 'none'; }
   $('sidebar-toggle').addEventListener('click', () => {
-    if (isDesktop()) {
-      const collapsed = sidebar.dataset.collapsed !== 'true';
-      sidebar.dataset.collapsed = String(collapsed);
-      try { localStorage.setItem('vp-sidebar', collapsed ? 'collapsed' : 'open'); } catch { /* private mode */ }
-    } else {
-      const open = sidebar.dataset.open !== 'true';
-      sidebar.dataset.open = String(open);
-      backdrop.style.display = open ? 'block' : 'none';
-    }
+    if (isDesktop()) { const collapsed = sidebar.dataset.collapsed !== 'true'; sidebar.dataset.collapsed = String(collapsed); safeStore.set('vp-sidebar', collapsed ? 'collapsed' : 'open'); }
+    else { const open = sidebar.dataset.open !== 'true'; sidebar.dataset.open = String(open); backdrop.style.display = open ? 'block' : 'none'; }
   });
   backdrop.addEventListener('click', closeSidebar);
+  if (safeStore.get('vp-sidebar') === 'collapsed') sidebar.dataset.collapsed = 'true';
 
-  // restore desktop collapse preference
-  try {
-    if (localStorage.getItem('vp-sidebar') === 'collapsed') sidebar.dataset.collapsed = 'true';
-  } catch { /* private mode */ }
-
-  // init UI state
-  applyLayout();
-  syncFrameToggle();
-  customScreens.forEach((d) => insertCustomRow(d)); // rebuild saved custom screens
+  // Init UI state
+  applyLayout(); syncFrameToggle();
+  const fragCustom = document.createDocumentFragment();
+  customScreens.forEach(d => insertCustomRow(d));
   zoomLabel.textContent = zoom === 'fit' ? 'Fit' : `${Math.round((zoom as number) * 100)}%`;
   updateCount();
+  if (currentUrl) { input.value = currentUrl; clearBtn.style.display = 'block'; renderAll(); }
 
-  // restore a previously checked URL + its previews
-  if (currentUrl) {
-    input.value = currentUrl;
-    clearBtn.style.display = 'block';
-    renderAll();
-  }
-
-  // Block the Pro features for non-pro users (capture phase runs before the
-  // navbar dropdown / link handlers, so the menu never opens & nav is cancelled).
+  // PRO Gating Checks
   if (!CAN_PRO) {
     $('social-btn').addEventListener('click', (e) => { e.preventDefault(); proToast('Social preview'); }, true);
     $('capture-btn').addEventListener('click', (e) => { e.preventDefault(); e.stopImmediatePropagation(); proToast('Capture'); }, true);
   }
+  if (new URLSearchParams(location.search).get('error') === 'pro') toast.warning('That area is Pro-only', { description: 'Upgrade to Pro to unlock Social preview and Captures.', log: false });
 
-  // ?error=pro → a gated Pro route bounced the user back here
-  if (new URLSearchParams(location.search).get('error') === 'pro') {
-    toast.warning('That area is Pro-only', { description: 'Upgrade to Pro to unlock Social preview and Captures.', log: false });
-  }
-
-  // ---------- navbar dropdowns (account + theme) ----------
+  // ---------- Navbar Dropdowns ----------
   const accountMenu = $('account-menu');
-  const menus = [
-    { btn: $('account-btn'), menu: accountMenu },
-    { btn: $('theme-btn'), menu: $('theme-menu') },
-    { btn: $('workspace-btn'), menu: $('workspace-menu') },
-    { btn: $('capture-btn'), menu: $('capture-menu') },
-  ];
+  const menus = [{ btn: $('account-btn'), menu: accountMenu }, { btn: $('theme-btn'), menu: $('theme-menu') }, { btn: $('workspace-btn'), menu: $('workspace-menu') }, { btn: $('capture-btn'), menu: $('capture-menu') }];
   const isOpen = (m: HTMLElement) => m.style.display === 'block';
-  function setMenu(menu: HTMLElement, btn: HTMLElement, open: boolean) {
-    menu.style.display = open ? 'block' : 'none';
-    btn.setAttribute('aria-expanded', String(open));
-  }
-  function closeAllMenus() {
-    menus.forEach((m) => setMenu(m.menu, m.btn, false));
-  }
+  function setMenu(menu: HTMLElement, btn: HTMLElement, open: boolean) { menu.style.display = open ? 'block' : 'none'; btn.setAttribute('aria-expanded', String(open)); }
+  function closeAllMenus() { menus.forEach(m => setMenu(m.menu, m.btn, false)); }
   const closeAccountMenu = () => setMenu(accountMenu, menus[0].btn, false);
 
-  menus.forEach(({ btn, menu }) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const open = !isOpen(menu);
-      closeAllMenus();
-      setMenu(menu, btn, open);
-    });
-  });
-  document.addEventListener('click', (e) => {
-    menus.forEach(({ btn, menu }) => {
-      if (isOpen(menu) && !menu.contains(e.target as Node) && !btn.contains(e.target as Node)) setMenu(menu, btn, false);
-    });
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const open = menus.find((m) => isOpen(m.menu));
-      if (open) { setMenu(open.menu, open.btn, false); open.btn.focus(); }
-    }
-  });
+  menus.forEach(({ btn, menu }) => btn.addEventListener('click', (e) => { e.stopPropagation(); const open = !isOpen(menu); closeAllMenus(); setMenu(menu, btn, open); }));
+  document.addEventListener('click', (e) => menus.forEach(({ btn, menu }) => { if (isOpen(menu) && !menu.contains(e.target as Node) && !btn.contains(e.target as Node)) setMenu(menu, btn, false); }));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const open = menus.find(m => isOpen(m.menu)); if (open) { setMenu(open.menu, open.btn, false); open.btn.focus(); } } });
 
-  // ---------- theme (light | dark | system) ----------
+  // ---------- Themes ----------
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-  const themeMode = () => (localStorage.getItem('vp-theme') as 'light' | 'dark' | 'system' | null) ?? 'system';
-
+  const themeMode = () => (safeStore.get('vp-theme') as 'light' | 'dark' | 'system' | null) ?? 'system';
   function applyTheme() {
-    const mode = themeMode();
-    const dark = mode === 'dark' || (mode === 'system' && prefersDark.matches);
+    const mode = themeMode(), dark = mode === 'dark' || (mode === 'system' && prefersDark.matches);
     document.documentElement.classList.toggle('dark', dark);
-    document.querySelectorAll<HTMLElement>('.theme-mode').forEach((b) =>
-      b.setAttribute('aria-checked', String(b.dataset.themeMode === mode))
-    );
+    $$<HTMLElement>('.theme-mode').forEach(b => b.setAttribute('aria-checked', String(b.dataset.themeMode === mode)));
   }
-  document.querySelectorAll<HTMLButtonElement>('.theme-mode').forEach((b) =>
-    b.addEventListener('click', () => {
-      localStorage.setItem('vp-theme', b.dataset.themeMode!);
-      applyTheme();
-    })
-  );
-  // react to OS theme changes while in "system" mode
+  $$<HTMLButtonElement>('.theme-mode').forEach(b => b.addEventListener('click', () => { safeStore.set('vp-theme', b.dataset.themeMode!); applyTheme(); }));
   prefersDark.addEventListener('change', () => { if (themeMode() === 'system') applyTheme(); });
   applyTheme();
 
-  // ---------- color theme (accent palette) ----------
-  const colorTheme = () => localStorage.getItem('vp-color') || 'emerald';
+  const colorTheme = () => safeStore.get('vp-color') || 'emerald';
   function applyColor() {
-    const c = colorTheme();
-    document.documentElement.dataset.theme = c;
-    document.querySelectorAll<HTMLElement>('.color-swatch').forEach((b) =>
-      b.setAttribute('aria-checked', String(b.dataset.color === c))
-    );
+    const c = colorTheme(); document.documentElement.dataset.theme = c;
+    $$<HTMLElement>('.color-swatch').forEach(b => b.setAttribute('aria-checked', String(b.dataset.color === c)));
   }
-  document.querySelectorAll<HTMLButtonElement>('.color-swatch').forEach((b) =>
-    b.addEventListener('click', () => {
-      localStorage.setItem('vp-color', b.dataset.color!);
-      applyColor();
-    })
-  );
+  $$<HTMLButtonElement>('.color-swatch').forEach(b => b.addEventListener('click', () => { safeStore.set('vp-color', b.dataset.color!); applyColor(); }));
   applyColor();
 
-  // ---------- workspaces ----------
+  // ---------- Workspaces ----------
   type Workspace = { id: string; name: string; state: VPState };
-  const WS_KEY = 'vp-workspaces';
-  const ACTIVE_WS_KEY = 'vp-active-ws';
-  const wsList = $('ws-list');
-  const wsEmpty = $('ws-empty');
+  const WS_KEY = 'vp-workspaces', ACTIVE_WS_KEY = 'vp-active-ws';
+  const wsList = $('ws-list'), wsEmpty = $('ws-empty');
 
-  const loadWorkspaces = (): Workspace[] => {
-    try { return JSON.parse(localStorage.getItem(WS_KEY) || '[]'); } catch { return []; }
-  };
-  const saveWorkspaces = (list: Workspace[]) => {
-    try { localStorage.setItem(WS_KEY, JSON.stringify(list)); } catch { /* private mode */ }
-  };
-  const activeWsId = () => localStorage.getItem(ACTIVE_WS_KEY) || '';
+  const loadWorkspaces = (): Workspace[] => { try { return JSON.parse(safeStore.get(WS_KEY) || '[]'); } catch { return []; } };
+  const saveWorkspaces = (list: Workspace[]) => safeStore.set(WS_KEY, JSON.stringify(list));
+  const activeWsId = () => safeStore.get(ACTIVE_WS_KEY) || '';
 
-  // Apply a saved arrangement at runtime (no page reload).
   function applyState(s: VPState) {
-    currentUrl = s.url || '';
-    input.value = currentUrl;
-    clearBtn.style.display = currentUrl ? 'block' : 'none';
-    layout = s.layout === 'grid' ? 'grid' : 'row';
-    zoom = s.zoom === 'fit' || typeof s.zoom === 'number' ? s.zoom : 'fit';
-    framesOn = s.framesOn !== false;
-
+    currentUrl = s.url || ''; input.value = currentUrl; clearBtn.style.display = currentUrl ? 'block' : 'none';
+    layout = s.layout === 'grid' ? 'grid' : 'row'; zoom = s.zoom === 'fit' || typeof s.zoom === 'number' ? s.zoom : 'fit'; framesOn = s.framesOn !== false;
     active.clear();
-    (s.devices || []).forEach((d) => active.set(d.id, d));
-    if (active.size > MAX_SCREENS) {
-      [...active.keys()].slice(MAX_SCREENS).forEach((id) => active.delete(id));
-    }
+    (s.devices || []).forEach(d => active.set(d.id, d));
+    if (active.size > MAX_SCREENS) [...active.keys()].slice(MAX_SCREENS).forEach(id => active.delete(id));
 
-    // rebuild custom screens + their sidebar rows
-    customScreens.clear();
-    customList.innerHTML = '';
-    (s.customScreens || []).forEach((d) => { customScreens.set(d.id, d); trackCustomCount(d.id); insertCustomRow(d); });
-    syncCustomGroup();
-
-    document.querySelectorAll<HTMLButtonElement>('.device-row').forEach((row) => {
-      row.dataset.on = String(active.has(row.dataset.id!));
-    });
-
-    applyLayout();
-    syncFrameToggle();
+    customScreens.clear(); customList.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    (s.customScreens || []).forEach(d => { customScreens.set(d.id, d); trackCustomCount(d.id); insertCustomRow(d); });
+    syncCustomGroup(); syncDeviceRows(); applyLayout(); syncFrameToggle();
     zoomLabel.textContent = zoom === 'fit' ? 'Fit' : `${Math.round((zoom as number) * 100)}%`;
     updateCount();
-    if (currentUrl) {
-      renderAll();
-    } else {
-      frames.innerHTML = '';
-      emptyState.style.display = 'flex';
-    }
+    if (currentUrl) renderAll(); else { clearFrames(); emptyState.style.display = 'flex'; }
     store.save();
   }
 
   function renderWorkspaces() {
-    const list = loadWorkspaces();
-    const activeId = activeWsId();
-    wsList.innerHTML = '';
-    wsEmpty.style.display = list.length ? 'none' : 'block';
-    list.forEach((ws) => {
-      const li = document.createElement('li');
-      const isActive = ws.id === activeId;
-      li.innerHTML = `
-        <div class="group flex items-center gap-1 rounded-sm px-1 hover:bg-accent">
-          <button type="button" class="ws-load flex min-w-0 flex-1 items-center gap-2 py-1.5 pl-1 text-left text-sm outline-none" data-id="${ws.id}">
-            <svg class="size-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4.5-9 4.5-9-4.5L12 3z"/><path d="m3 12 9 4.5 9-4.5"/></svg>
-            <span class="min-w-0 flex-1 truncate ${isActive ? 'font-medium' : ''}">${escapeHtml(ws.name)}</span>
-            ${isActive ? '<span class="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-primary">Active</span>' : ''}
-          </button>
-          <button type="button" class="ws-del grid size-6 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100" data-id="${ws.id}" aria-label="Delete ${escapeHtml(ws.name)}" title="Delete workspace">
-            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-          </button>
-        </div>`;
-      li.querySelector<HTMLButtonElement>('.ws-load')!.addEventListener('click', () => {
-        const found = loadWorkspaces().find((w) => w.id === ws.id);
-        if (!found) return;
-        applyState(found.state);
-        localStorage.setItem(ACTIVE_WS_KEY, ws.id);
-        renderWorkspaces();
-        closeAllMenus();
+    const list = loadWorkspaces(), activeId = activeWsId();
+    wsList.innerHTML = ''; wsEmpty.style.display = list.length ? 'none' : 'block';
+    const frag = document.createDocumentFragment();
+    list.forEach(ws => {
+      const li = document.createElement('li'), isActive = ws.id === activeId;
+      li.innerHTML = `<div class="group flex items-center gap-1 rounded-sm px-1 hover:bg-accent"><button type="button" class="ws-load flex min-w-0 flex-1 items-center gap-2 py-1.5 pl-1 text-left text-sm outline-none" data-id="${ws.id}"><svg class="size-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4.5-9 4.5-9-4.5L12 3z"/><path d="m3 12 9 4.5 9-4.5"/></svg><span class="min-w-0 flex-1 truncate ${isActive ? 'font-medium' : ''}">${escapeHtml(ws.name)}</span>${isActive ? '<span class="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-primary">Active</span>' : ''}</button><button type="button" class="ws-del grid size-6 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100" data-id="${ws.id}" aria-label="Delete" title="Delete workspace"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></div>`;
+      li.querySelector('.ws-load')!.addEventListener('click', () => {
+        const found = loadWorkspaces().find(w => w.id === ws.id); if (!found) return;
+        applyState(found.state); safeStore.set(ACTIVE_WS_KEY, ws.id); renderWorkspaces(); closeAllMenus();
         toast.info('Workspace loaded', { description: ws.name, log: 'Workspace loaded' });
       });
-      li.querySelector<HTMLButtonElement>('.ws-del')!.addEventListener('click', (e) => {
-        e.stopPropagation();
-        saveWorkspaces(loadWorkspaces().filter((w) => w.id !== ws.id));
-        if (activeWsId() === ws.id) localStorage.removeItem(ACTIVE_WS_KEY);
-        renderWorkspaces();
+      li.querySelector('.ws-del')!.addEventListener('click', (e) => {
+        e.stopPropagation(); saveWorkspaces(loadWorkspaces().filter(w => w.id !== ws.id));
+        if (activeWsId() === ws.id) safeStore.remove(ACTIVE_WS_KEY); renderWorkspaces();
         toast.success('Workspace deleted', { description: ws.name, log: 'Workspace deleted' });
       });
-      wsList.appendChild(li);
+      frag.appendChild(li);
     });
+    wsList.appendChild(frag);
   }
 
-  // Save modal
-  const wsModal = $('workspace-modal');
-  const wsNameEl = $<HTMLInputElement>('workspace-name');
-  const wsErr = $('workspace-error');
-  function openWsModal() {
-    wsNameEl.value = '';
-    wsErr.style.display = 'none';
-    wsModal.style.display = 'flex';
-    setTimeout(() => wsNameEl.focus(), 0);
-  }
+  const wsModal = $('workspace-modal'), wsNameEl = $<HTMLInputElement>('workspace-name'), wsErr = $('workspace-error');
+  function openWsModal() { wsNameEl.value = ''; wsErr.style.display = 'none'; wsModal.style.display = 'flex'; setTimeout(() => wsNameEl.focus(), 0); }
   const closeWsModal = () => { wsModal.style.display = 'none'; };
 
-  $('ws-save').addEventListener('click', () => {
-    closeAllMenus();
-    if (!canSaveWorkspace(loadWorkspaces().length)) return;
-    openWsModal();
-  });
-  $('workspace-cancel').addEventListener('click', closeWsModal);
-  $('workspace-modal-close').addEventListener('click', closeWsModal);
-  $('workspace-modal-overlay').addEventListener('click', closeWsModal);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && wsModal.style.display === 'flex') closeWsModal();
-  });
-  ($('workspace-form') as unknown as HTMLFormElement).addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = wsNameEl.value.trim();
-    if (!name) { wsErr.style.display = 'block'; return; }
-    const list = loadWorkspaces();
-    if (!canSaveWorkspace(list.length)) { closeWsModal(); return; }
-    const id = `ws-${Date.now()}`;
-    list.push({ id, name, state: snapshot() });
-    saveWorkspaces(list);
-    localStorage.setItem(ACTIVE_WS_KEY, id);
-    renderWorkspaces();
-    closeWsModal();
+  $('ws-save').addEventListener('click', () => { closeAllMenus(); if (!canSaveWorkspace(loadWorkspaces().length)) return; openWsModal(); });
+  $('workspace-cancel').addEventListener('click', closeWsModal); $('workspace-modal-close').addEventListener('click', closeWsModal); $('workspace-modal-overlay').addEventListener('click', closeWsModal);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && wsModal.style.display === 'flex') closeWsModal(); });
+  ($('workspace-form') as HTMLFormElement).addEventListener('submit', (e) => {
+    e.preventDefault(); const name = wsNameEl.value.trim(); if (!name) { wsErr.style.display = 'block'; return; }
+    const list = loadWorkspaces(); if (!canSaveWorkspace(list.length)) return closeWsModal();
+    const id = `ws-${Date.now()}`; list.push({ id, name, state: snapshot() });
+    saveWorkspaces(list); safeStore.set(ACTIVE_WS_KEY, id); renderWorkspaces(); closeWsModal();
     toast.success('Workspace saved', { description: name, log: 'Workspace saved' });
   });
-
   renderWorkspaces();
 
-  // ----- export / import (JSON) -----
+  // Export / Import
   let wsStatusTimer = 0;
   function showWsStatus(msg: string, isError: boolean) {
-    const el = $('ws-status');
-    el.textContent = msg;
-    el.style.display = 'block';
-    el.className = `px-2 pt-1 text-xs ${isError ? 'text-destructive' : 'text-muted-foreground'}`;
-    clearTimeout(wsStatusTimer);
-    wsStatusTimer = window.setTimeout(() => { el.style.display = 'none'; }, 4000);
+    const el = $('ws-status'); el.textContent = msg; el.style.display = 'block'; el.className = `px-2 pt-1 text-xs ${isError ? 'text-destructive' : 'text-muted-foreground'}`;
+    clearTimeout(wsStatusTimer); wsStatusTimer = window.setTimeout(() => { el.style.display = 'none'; }, 4000);
   }
-
   function downloadJSON(filename: string, text: string) {
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' })), a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
-
   $('ws-export').addEventListener('click', () => {
-    let list = loadWorkspaces();
-    // fall back to the current arrangement so export is never empty
-    if (!list.length) list = [{ id: `ws-${Date.now()}`, name: 'Current', state: snapshot() }];
+    let list = loadWorkspaces(); if (!list.length) list = [{ id: `ws-${Date.now()}`, name: 'Current', state: snapshot() }];
     const payload = { app: 'viewport', kind: 'workspaces', version: 1, exportedAt: new Date().toISOString(), workspaces: list };
-    const stamp = new Date().toISOString().slice(0, 10);
-    downloadJSON(`viewport-workspaces-${stamp}.json`, JSON.stringify(payload, null, 2));
-    const msg = `Exported ${list.length} workspace${list.length > 1 ? 's' : ''}.`;
-    showWsStatus(msg, false);
-    toast.success('Workspaces exported', { description: msg, log: 'Workspaces exported' });
+    downloadJSON(`viewport-workspaces-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2));
+    const msg = `Exported ${list.length} workspace${list.length > 1 ? 's' : ''}.`; showWsStatus(msg, false); toast.success('Workspaces exported', { description: msg, log: 'Workspaces exported' });
   });
 
   const wsFile = $<HTMLInputElement>('ws-file');
   $('ws-import').addEventListener('click', () => wsFile.click());
   wsFile.addEventListener('change', async () => {
-    const file = wsFile.files?.[0];
-    if (!file) return;
+    const file = wsFile.files?.[0]; if (!file) return;
     try {
-      const data = JSON.parse(await file.text());
-      const incoming = Array.isArray(data) ? data : data?.workspaces;
+      const data = JSON.parse(await file.text()), incoming = Array.isArray(data) ? data : data?.workspaces;
       if (!Array.isArray(incoming)) throw new Error('no workspaces');
-      const valid = incoming.filter(
-        (w: any) => w && typeof w.name === 'string' && w.state && Array.isArray(w.state.devices)
-      );
+      const valid = incoming.filter((w: any) => w && typeof w.name === 'string' && w.state && Array.isArray(w.state.devices));
       if (!valid.length) throw new Error('no valid workspaces');
-      const list = loadWorkspaces();
-      const room = MAX_WORKSPACES - list.length;
-      if (room <= 0) {
-        toast.warning(
-          MAX_WORKSPACES === 0 ? 'Saving workspaces needs an account' : `Free plan saves up to ${MAX_WORKSPACES} workspaces`,
-          { description: MAX_WORKSPACES === 0 ? 'Sign up free to import workspaces.' : 'Upgrade to Pro for unlimited workspaces.', log: false }
-        );
-        return;
-      }
+      const list = loadWorkspaces(), room = MAX_WORKSPACES - list.length;
+      if (room <= 0) return toast.warning(MAX_WORKSPACES === 0 ? 'Saving workspaces needs an account' : `Free plan saves up to ${MAX_WORKSPACES} workspaces`, { description: MAX_WORKSPACES === 0 ? 'Sign up free to import workspaces.' : 'Upgrade to Pro for unlimited workspaces.', log: false });
       const toAdd = valid.slice(0, room);
-      toAdd.forEach((w: Workspace, i: number) =>
-        list.push({ id: `ws-${Date.now()}-${i}`, name: w.name, state: w.state })
-      );
-      saveWorkspaces(list);
-      renderWorkspaces();
-      const skipped = valid.length - toAdd.length;
-      const msg = `Imported ${toAdd.length} workspace${toAdd.length > 1 ? 's' : ''}${skipped ? ` · ${skipped} skipped (limit reached)` : ''}.`;
-      showWsStatus(msg, skipped > 0);
-      toast.success('Workspaces imported', { description: msg, log: 'Workspaces imported' });
-    } catch {
-      showWsStatus('Import failed — not a valid workspaces file.', true);
-      toast.error('Import failed', { description: 'Not a valid workspaces file.', log: 'Import failed' });
-    } finally {
-      wsFile.value = '';
-    }
+      toAdd.forEach((w: Workspace, i: number) => list.push({ id: `ws-${Date.now()}-${i}`, name: w.name, state: w.state }));
+      saveWorkspaces(list); renderWorkspaces();
+      const skipped = valid.length - toAdd.length, msg = `Imported ${toAdd.length} workspace${toAdd.length > 1 ? 's' : ''}${skipped ? ` · ${skipped} skipped (limit reached)` : ''}.`;
+      showWsStatus(msg, skipped > 0); toast.success('Workspaces imported', { description: msg, log: 'Workspaces imported' });
+    } catch { showWsStatus('Import failed — not a valid workspaces file.', true); toast.error('Import failed', { description: 'Not a valid workspaces file.', log: 'Import failed' }); }
+    finally { wsFile.value = ''; }
   });
 
-  // ---------- screen capture (screenshot + record) ----------
+  // ---------- Screen Capture ----------
   const openEditor = mountEditor();
-  const canvasEl = $('canvas');
-  const capStop = $('cap-stop');
-  const recBadge = $('rec-badge');
-  const recText = $('rec-text');
+  const canvasEl = $('canvas'), capStop = $('cap-stop'), recBadge = $('rec-badge'), recText = $('rec-text');
   const hostOf = (u: string) => { try { return new URL(u).hostname; } catch { return ''; } };
 
   let capStatusTimer = 0;
   function capStatus(msg: string, isError = false) {
-    const el = $('cap-status');
-    el.textContent = msg;
-    el.className = `px-2 pt-1 text-xs ${isError ? 'text-destructive' : 'text-muted-foreground'}`;
-    el.style.display = 'block';
-    clearTimeout(capStatusTimer);
-    capStatusTimer = window.setTimeout(() => { el.style.display = 'none'; }, 4000);
+    const el = $('cap-status'); el.textContent = msg; el.className = `px-2 pt-1 text-xs ${isError ? 'text-destructive' : 'text-muted-foreground'}`; el.style.display = 'block';
+    clearTimeout(capStatusTimer); capStatusTimer = window.setTimeout(() => { el.style.display = 'none'; }, 4000);
   }
   const syncSharing = () => { capStop.style.display = isSharing() ? 'flex' : 'none'; };
-
-  const onCaptureSaved = (c: Capture) => {
-    const label = c.type === 'video' ? 'Recording saved' : 'Screenshot saved';
-    toast.success(label, { description: c.title || c.host || 'Saved to Captures', log: label });
-  };
+  const onCaptureSaved = (c: Capture) => toast.success(c.type === 'video' ? 'Recording saved' : 'Screenshot saved', { description: c.title || c.host || 'Saved to Captures', log: c.type === 'video' ? 'Recording saved' : 'Screenshot saved' });
 
   function baseCapture(type: 'screenshot' | 'video', blob: Blob, thumb: Blob | null, width: number, height: number, durationMs: number): Capture {
-    return {
-      id: crypto.randomUUID(),
-      type, blob, thumb, mime: blob.type,
-      url: currentUrl, host: hostOf(currentUrl),
-      title: formatCaptureTitle(), description: '', notes: '', annotations: [],
-      durationMs, width, height, createdAt: Date.now(),
-    };
+    return { id: crypto.randomUUID(), type, blob, thumb, mime: blob.type, url: currentUrl, host: hostOf(currentUrl), title: formatCaptureTitle(), description: '', notes: '', annotations: [], durationMs, width, height, createdAt: Date.now() };
   }
 
-  if (!isSupported()) {
-    ['cap-shot', 'cap-rec5', 'cap-rec10'].forEach((id) => {
-      const b = $<HTMLButtonElement>(id);
-      b.disabled = true;
-      b.classList.add('opacity-50', 'cursor-not-allowed');
-    });
-  }
+  if (!isSupported()) ['cap-shot', 'cap-rec5', 'cap-rec10'].forEach(id => { const b = $<HTMLButtonElement>(id); b.disabled = true; b.classList.add('opacity-50', 'cursor-not-allowed'); });
 
   async function doScreenshot() {
     closeAllMenus();
-    try {
-      const { blob, width, height } = await screenshot(canvasEl);
-      syncSharing();
-      openEditor(baseCapture('screenshot', blob, blob, width, height, 0), onCaptureSaved);
-    } catch {
-      capStatus('Capture cancelled or blocked.', true);
-      toast.warning('Screenshot cancelled', { log: 'Screenshot cancelled' });
-    }
+    try { const { blob, width, height } = await screenshot(canvasEl); syncSharing(); openEditor(baseCapture('screenshot', blob, blob, width, height, 0), onCaptureSaved); }
+    catch { capStatus('Capture cancelled or blocked.', true); toast.warning('Screenshot cancelled', { log: 'Screenshot cancelled' }); }
   }
-
   async function doRecord(seconds: number) {
-    closeAllMenus();
-    recText.textContent = `Recording… ${seconds}s`;
-    recBadge.style.display = 'flex';
+    closeAllMenus(); recText.textContent = `Recording… ${seconds}s`; recBadge.style.display = 'flex';
     try {
-      const { blob, thumb, width, height, durationMs } = await record(seconds * 1000, (rem) => {
-        recText.textContent = `Recording… ${Math.ceil(rem / 1000)}s`;
-      });
-      recBadge.style.display = 'none';
-      syncSharing();
-      openEditor(baseCapture('video', blob, thumb, width, height, durationMs), onCaptureSaved);
-    } catch {
-      recBadge.style.display = 'none';
-      capStatus('Recording cancelled or blocked.', true);
-      toast.warning('Recording cancelled', { log: 'Recording cancelled' });
-    }
+      const { blob, thumb, width, height, durationMs } = await record(seconds * 1000, (rem) => { recText.textContent = `Recording… ${Math.ceil(rem / 1000)}s`; });
+      recBadge.style.display = 'none'; syncSharing(); openEditor(baseCapture('video', blob, thumb, width, height, durationMs), onCaptureSaved);
+    } catch { recBadge.style.display = 'none'; capStatus('Recording cancelled or blocked.', true); toast.warning('Recording cancelled', { log: 'Recording cancelled' }); }
   }
 
   $('cap-shot').addEventListener('click', doScreenshot);
@@ -1872,78 +1347,34 @@ const canUsePro = hasPro;
   capStop.addEventListener('click', () => { stopSharing(); syncSharing(); closeAllMenus(); });
   syncSharing();
 
-  // ---------- keyboard shortcuts modal ----------
-  $('shortcuts-item').addEventListener('click', () => {
-    closeAccountMenu();
-    $('shortcuts-modal').style.display = 'flex';
-  });
+  // ---------- Keyboard Shortcuts Modal ----------
+  $('shortcuts-item').addEventListener('click', () => { closeAccountMenu(); $('shortcuts-modal').style.display = 'flex'; });
   $('shortcuts-close').addEventListener('click', () => { $('shortcuts-modal').style.display = 'none'; });
   $('shortcuts-overlay').addEventListener('click', () => { $('shortcuts-modal').style.display = 'none'; });
   document.addEventListener('keydown', (e) => {
     const typing = /^(input|textarea)$/i.test((e.target as HTMLElement).tagName);
-    if (e.key === '?' && !typing) {
-      e.preventDefault();
-      $('shortcuts-modal').style.display = 'flex';
-    }
-    if (e.key === '/' && !typing) {
-      e.preventDefault();
-      input.focus();
-    }
+    if (e.key === '?' && !typing) { e.preventDefault(); $('shortcuts-modal').style.display = 'flex'; }
+    if (e.key === '/' && !typing) { e.preventDefault(); input.focus(); }
     if (e.key === 'Escape' && $('shortcuts-modal').style.display === 'flex') $('shortcuts-modal').style.display = 'none';
   });
 
-  // ---------- logout ----------
+  // ---------- Auth / URL Params ----------
   let loggingOut = false;
   $('logout-item').addEventListener('click', async () => {
-    if (loggingOut) return;
-    loggingOut = true;
-    closeAccountMenu();
-
-    // show the spinner overlay
-    const overlay = $('logout-overlay');
-    overlay.style.display = 'flex';
-
-    // end the server session (clears the auth cookie)
-    try {
-      await signOut();
-    } catch {
-      /* even if the network call fails, still clear local state below */
-    }
-
-    // clear this app's local persistence (workspaces, theme, sidebar, activity, etc.)
-    try {
-      Object.keys(localStorage)
-        .filter((k) => k.startsWith('vp-'))
-        .forEach((k) => localStorage.removeItem(k));
-    } catch {
-      /* storage may be unavailable — ignore */
-    }
-
-    // brief beat so the spinner is visible, then route to login
-    setTimeout(() => {
-      location.href = '/login';
-    }, 450);
+    if (loggingOut) return; loggingOut = true; closeAccountMenu(); $('logout-overlay').style.display = 'flex';
+    try { await signOut(); } catch {}
+    safeStore.clearKeys('vp-');
+    setTimeout(() => { location.href = '/login'; }, 450);
   });
 
-  // ?auth= welcome toast after sign-in / verify (flag set by the auth pages)
   {
-    const sp = new URLSearchParams(location.search);
-    const authFlag = sp.get('auth');
+    const sp = new URLSearchParams(location.search), authFlag = sp.get('auth');
     if (authFlag) {
       if (authFlag === 'welcome') toast.success('Welcome to Viewport', { description: 'Your account is ready.', log: false });
       else if (authFlag === 'verified') toast.success('Email verified', { description: 'You are signed in.', log: false });
       else toast.success('Signed in', { description: 'Welcome back!', log: false });
-      // strip the flag so it doesn't re-fire on refresh
-      sp.delete('auth');
-      const qs = sp.toString();
-      history.replaceState({}, '', location.pathname + (qs ? `?${qs}` : ''));
+      sp.delete('auth'); const qs = sp.toString(); history.replaceState({}, '', location.pathname + (qs ? `?${qs}` : ''));
     }
-  }
-
-  // ?url= deep link
-  const param = new URLSearchParams(location.search).get('url');
-  if (param) {
-    input.value = param;
-    form.requestSubmit();
+    const paramUrl = sp.get('url'); if (paramUrl) { input.value = paramUrl; form.requestSubmit(); }
   }
 </script>
