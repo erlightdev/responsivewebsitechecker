@@ -145,6 +145,31 @@ const injectedScrollbarStyle = `<style data-viewport-scrollbar>
 // before the app bundle.
 const injectedHeadScript = `<script data-viewport-proxy-sw>(function(){try{var s=navigator&&navigator.serviceWorker;if(s){s.register=function(){return new Promise(function(){})};if(s.getRegistration)s.getRegistration=function(){return Promise.resolve()};if(s.getRegistrations)s.getRegistrations=function(){return Promise.resolve([])}}}catch(e){}})();</script>`;
 
+// Same-origin links a proxied SPA builds at runtime never pass through the HTML
+// rewriter above, so they point at our origin WITHOUT the __vphost marker: the
+// hovered URL looks wrong and opening one in a new tab (no Referer to fall back
+// on) 404s. This observer stamps the marker onto same-origin <a href> and
+// <form action> as the app renders them, so navigation stays proxied everywhere —
+// clicks, new tabs, referer-less requests — not just via the Referer fallback.
+// The marker is a query param, so it never changes location.pathname (which SPA
+// routers branch on). Idempotent: an already-marked URL is left alone, so the
+// setAttribute can't loop against its own mutation record.
+function injectedNavScript(origin: string): string {
+  return `<script data-viewport-proxy-nav>(function(){try{
+var ORIGIN=${JSON.stringify(origin)},MARK=${JSON.stringify(VPHOST)},SELF=location.origin;
+function fix(el,attr){try{if(!el||!el.getAttribute)return;var v=el.getAttribute(attr);if(!v)return;
+var a=new URL(v,location.href);if(a.origin!==SELF&&a.origin!==ORIGIN)return;if(a.searchParams.get(MARK))return;
+a.searchParams.set(MARK,ORIGIN);el.setAttribute(attr,a.pathname+a.search+a.hash);}catch(e){}}
+function scan(n){if(!n||n.nodeType!==1)return;if(n.tagName==='A')fix(n,'href');else if(n.tagName==='FORM')fix(n,'action');
+if(n.querySelectorAll){var as=n.querySelectorAll('a[href]'),i;for(i=0;i<as.length;i++)fix(as[i],'href');
+var fo=n.querySelectorAll('form[action]');for(i=0;i<fo.length;i++)fix(fo[i],'action');}}
+function run(){scan(document.documentElement);new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var m=ms[i];
+if(m.type==='attributes')fix(m.target,m.attributeName);for(var k=0;k<m.addedNodes.length;k++)scan(m.addedNodes[k]);}})
+.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['href','action']});}
+if(document.documentElement)run();else document.addEventListener('DOMContentLoaded',run);
+}catch(e){}})();</script>`;
+}
+
 /** Map a same-origin absolute URL to a path-mirroring proxy URL. */
 function proxied(abs: string): string {
   try {
@@ -204,13 +229,14 @@ function rewriteHtml(html: string, base: string): string {
   // Force a full-URL referer so JS-created subresources carry __vphost.
   html = html.replace(/<meta[^>]+name=["']?referrer["']?[^>]*>/gi, '');
   const referrerMeta = '<meta name="referrer" content="unsafe-url">';
+  const earlyHead = injectedHeadScript + injectedNavScript(baseOrigin);
   if (/<head[^>]*>/i.test(html)) {
-    html = html.replace(/<head[^>]*>/i, (m) => `${m}${injectedHeadScript}${referrerMeta}`);
+    html = html.replace(/<head[^>]*>/i, (m) => `${m}${earlyHead}${referrerMeta}`);
     html = /<\/head>/i.test(html)
       ? html.replace(/<\/head>/i, `${injectedScrollbarStyle}</head>`)
       : html + injectedScrollbarStyle;
   } else {
-    html = injectedHeadScript + referrerMeta + injectedScrollbarStyle + html;
+    html = earlyHead + referrerMeta + injectedScrollbarStyle + html;
   }
 
   // srcset: rewrite each candidate URL, preserve descriptors.
