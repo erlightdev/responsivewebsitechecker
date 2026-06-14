@@ -1,5 +1,6 @@
 # build output
 dist/
+.vercel/
 
 # generated types
 .astro/
@@ -12,6 +13,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+dev-*.log
+dev-*.err.log
 
 # environment variables
 .env
@@ -25,4 +28,3 @@ src/generated/
 
 # jetbrains setting folder
 .idea/
-docs/DEPLOY_VERCEL.md
