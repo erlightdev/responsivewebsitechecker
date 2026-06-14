@@ -88,7 +88,7 @@ const canUsePro = hasPro;
           inputmode="url"
           autocomplete="url"
           spellcheck="false"
-          placeholder="Enter URL — e.g. example.com"
+          placeholder="Enter a URL or search — e.g. example.com"
           class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
         <button type="button" id="clear-btn" class="tip hidden shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Clear URL" data-tip="Clear URL">
@@ -828,16 +828,44 @@ const canUsePro = hasPro;
   });
 
   // ---------- helpers ----------
+  // Treat anything that isn't a plausible URL as a web search, the way a browser
+  // address bar does. Routed through the proxy like any other site.
+  function searchUrl(q: string): string {
+    return 'https://www.google.com/search?q=' + encodeURIComponent(q);
+  }
+
+  // Parse the address box like a browser omnibox: accept bare domains, full
+  // http/https URLs, www-prefixed hosts, localhost, IPs and explicit ports —
+  // adding https:// (or http:// for local hosts) when no scheme is typed.
+  // Anything without a recognisable host (a phrase, a single word) becomes a
+  // web search. Returns a loadable URL, or null only for empty input.
   function normalizeUrl(raw: string): string | null {
-    let v = raw.trim();
+    const v = raw.trim().replace(/^["']+|["']+$/g, '').trim();
     if (!v) return null;
-    if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
+
+    // Explicit http/https → normalise and use directly.
+    if (/^https?:\/\//i.test(v)) {
+      try { return new URL(v).href; } catch { return searchUrl(v); }
+    }
+    // Any other explicit scheme (mailto:, file:, ftp:, javascript:…) can't be
+    // previewed in a frame — hand it to search.
+    if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return searchUrl(v);
+
+    // No scheme: does it look like a host? (a dotted TLD, localhost, or an IPv4,
+    // and no spaces). Otherwise it's a search query.
+    const host = v.split(/[/?#]/)[0];
+    const looksLikeHost =
+      !/\s/.test(v) &&
+      (/\.[a-z]{2,}([:/?#]|$)/i.test(v) ||
+        /^localhost([:/?#]|$)/i.test(v) ||
+        /^\d{1,3}(\.\d{1,3}){3}([:/?#]|$)/.test(v));
+    if (!looksLikeHost) return searchUrl(v);
+
+    const isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)([:/?#]|$)/i.test(host);
     try {
-      const u = new URL(v);
-      if (!u.hostname.includes('.') && u.hostname !== 'localhost') return null;
-      return u.href;
+      return new URL((isLocal ? 'http://' : 'https://') + v).href;
     } catch {
-      return null;
+      return searchUrl(v);
     }
   }
 

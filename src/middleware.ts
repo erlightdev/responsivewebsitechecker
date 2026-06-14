@@ -16,6 +16,33 @@ import { isProUser } from './lib/payments/subscription';
 // make us fetch the dev-toolbar module from the remote origin (corrupted MIME).
 const isDevInternal = (p: string) => p.startsWith('/@') || p.startsWith('/node_modules/');
 
+// Remembers the origin of the site currently being previewed. Lets subresources
+// that arrive with NEITHER a __vphost marker NOR a usable Referer (e.g. images a
+// SPA loads with referrerpolicy="no-referrer") still resolve to the right upstream
+// instead of 404ing against our own origin. The checker previews one URL at a time
+// across all device panes, so a single cookie is sufficient. Its name must NOT
+// start with the `__vp_` upstream-cookie prefix, or it'd be forwarded to the
+// third-party site (see extractProxyCookies).
+const PROXY_ORIGIN_COOKIE = 'vp_proxy_origin';
+
+// The remembered origin is only used for genuine static subresources — never for
+// top-level navigations (`document`) or app data fetches (`empty`/`cors`), so the
+// webapp's own pages and API calls always stay on the webapp.
+const SUBRESOURCE_DEST = new Set([
+  'image', 'script', 'style', 'font', 'audio', 'video', 'track', 'manifest', 'object', 'embed',
+]);
+
+function readCookie(header: string | null | undefined, name: string): string | null {
+  if (!header) return null;
+  for (const part of header.split(';')) {
+    const seg = part.trim();
+    const eq = seg.indexOf('=');
+    if (eq <= 0) continue;
+    if (seg.slice(0, eq) === name) return decodeURIComponent(seg.slice(eq + 1));
+  }
+  return null;
+}
+
 const proxy = defineMiddleware(async ({ request }, next) => {
   const url = new URL(request.url);
   if (isDevInternal(url.pathname)) return next();
@@ -36,6 +63,17 @@ const proxy = defineMiddleware(async ({ request }, next) => {
       } catch {
         /* malformed referer — ignore */
       }
+    }
+  }
+  if (!originRaw) {
+    // No marker on the URL or Referer. If this is a static subresource of the
+    // previewed page — not an app navigation/API call, and not one of the
+    // webapp's own asset paths — resolve it against the remembered origin (the
+    // URL the user typed in the checker) instead of letting it 404 on us.
+    const dest = request.headers.get('sec-fetch-dest') ?? '';
+    const appOwned = url.pathname.startsWith('/_') || url.pathname.startsWith('/favicon');
+    if (SUBRESOURCE_DEST.has(dest) && !appOwned) {
+      originRaw = readCookie(request.headers.get('cookie'), PROXY_ORIGIN_COOKIE);
     }
   }
   if (!originRaw) return next();
@@ -72,6 +110,14 @@ const proxy = defineMiddleware(async ({ request }, next) => {
     });
     const headers = new Headers(entry.headers);
     for (const c of entry.setCookie ?? []) headers.append('set-cookie', c);
+    // On a freshly-loaded preview document, remember its origin so the page's
+    // referer-less subresources can resolve to it (see the cookie fallback above).
+    if (own && (entry.headers['content-type'] ?? '').includes('text/html')) {
+      headers.append(
+        'set-cookie',
+        `${PROXY_ORIGIN_COOKIE}=${encodeURIComponent(origin)}; Path=/; Max-Age=86400; SameSite=Lax; HttpOnly`
+      );
+    }
     return new Response(entry.body as BodyInit, { status: entry.status, headers });
   } catch (e) {
     // Only the document/subresource we explicitly proxied gets an error page;
