@@ -202,7 +202,17 @@ function rewriteHtml(html: string, base: string): string {
   // into CORS mode.
   html = html.replace(/<base\b[^>]*>/gi, '');
   html = html.replace(/\s+integrity\s*=\s*("|')[^"']*\1/gi, '');
-  
+
+  // Strip page-level CSP delivered via <meta http-equiv>. The CSP *header* is
+  // already dropped (STRIP_RES_HEADERS), but a meta CSP survives in the body and
+  // would block our injected inline scripts (SW-neutraliser, history/nav patches)
+  // — while the page's own nonce'd frame-buster keeps running, letting it escape
+  // the frame. Removing it keeps the proxied page faithful AND our guards active.
+  html = html.replace(
+    /<meta\b[^>]*\bhttp-equiv\s*=\s*("|')?content-security-policy(-report-only)?\1[^>]*>/gi,
+    ''
+  );
+
   html = html.replace(/<html\b(?![^>]*\bdata-viewport-proxy-scrollbars\b)([^>]*)>/i, '<html data-viewport-proxy-scrollbars$1>');
 
   // Secure JS redirects (<meta http-equiv="refresh">)
