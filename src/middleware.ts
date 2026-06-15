@@ -28,8 +28,10 @@ const PROXY_ORIGIN_COOKIE = 'vp_proxy_origin';
 // The remembered origin is only used for genuine static subresources — never for
 // top-level navigations (`document`) or app data fetches (`empty`/`cors`), so the
 // webapp's own pages and API calls always stay on the webapp.
+// FIX: Added 'worker', 'sharedworker', and 'serviceworker' to catch Service Worker registrations.
 const SUBRESOURCE_DEST = new Set([
   'image', 'script', 'style', 'font', 'audio', 'video', 'track', 'manifest', 'object', 'embed',
+  'worker', 'sharedworker', 'serviceworker' 
 ]);
 
 function readCookie(header: string | null | undefined, name: string): string | null {
@@ -85,6 +87,20 @@ const proxy = defineMiddleware(async ({ request }, next) => {
     origin = o.origin;
   } catch {
     return next();
+  }
+
+  // FIX: Prevent Third-Party Service Workers from hijacking your app domain!
+  // If we proxy a remote SW, it will take over app.vercel.app and break your app.
+  // Instead, we return an empty dummy SW so the target site doesn't throw a 404 error.
+  const reqDest = request.headers.get('sec-fetch-dest') ?? '';
+  if (reqDest === 'serviceworker') {
+    return new Response(
+      `self.addEventListener('install', (e) => self.skipWaiting());\nself.addEventListener('activate', (e) => self.clients.claim());`,
+      { 
+        status: 200, 
+        headers: { 'content-type': 'application/javascript; charset=utf-8' } 
+      }
+    );
   }
 
   const params = new URLSearchParams(url.search);
