@@ -15,6 +15,7 @@
     "postinstall": ""
   },
   "dependencies": {
+    "@astrojs/netlify": "^7.0.13",
     "@astrojs/node": "^10.1.4",
     "@astrojs/vercel": "^10.0.8",
     "@prisma/client": "^6.19.3",

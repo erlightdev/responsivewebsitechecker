@@ -25,6 +25,11 @@ let config;
 try {
   config = JSON.parse(readFileSync(CONFIG, 'utf8'));
 } catch (err) {
+  // No Vercel output → this is a non-Vercel build (e.g. Netlify). Nothing to patch.
+  if (err.code === 'ENOENT') {
+    console.log('[fix-vercel-routes] no .vercel/output — not a Vercel build, skipping');
+    process.exit(0);
+  }
   console.error(`[fix-vercel-routes] could not read ${CONFIG}:`, err.message);
   process.exit(1);
 }
