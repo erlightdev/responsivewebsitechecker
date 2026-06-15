@@ -1037,7 +1037,12 @@ const canUsePro = hasPro;
         <div data-role="loader" class="absolute inset-0 z-10 grid place-items-center bg-card">
           <div class="size-6 animate-spin rounded-full border-2 border-muted border-t-primary"></div>
         </div>
-        <iframe title="${name} preview" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" loading="lazy" style="width:${w}px;height:${h}px;transform:scale(${s});transform-origin:top left;border:0"></iframe>
+        <iframe 
+  title="${name} preview" 
+  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation" 
+  loading="lazy" 
+  style="width:${w}px;height:${h}px;transform:scale(${s});transform-origin:top left;border:0"
+></iframe>
       </div>`;
 
     const skin = !framesOn ? `<div class="overflow-hidden rounded-md border border-border/70 shadow-lg">${screen}</div>`

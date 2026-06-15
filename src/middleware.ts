@@ -111,11 +111,19 @@ const proxy = defineMiddleware(async ({ request }, next) => {
     
     const headers = new Headers(entry.headers);
 
-    // FIX 1: Remove clickjacking headers so auth screens can be rendered inside the iframe initially
+    // FIX 1: Strip compression and sizing headers!
+    // Serverless platforms (like Vercel) auto-decompress the fetch response.
+    // If we don't delete these headers, the browser will try to decompress plain text, 
+    // resulting in binary garbage and "SyntaxError: Invalid or unexpected token" on JS files.
+    headers.delete('content-encoding');
+    headers.delete('content-length');
+    headers.delete('transfer-encoding');
+
+    // FIX 2: Remove clickjacking headers so auth screens can be rendered inside the iframe initially
     headers.delete('x-frame-options');
     headers.delete('content-security-policy');
 
-    // FIX 2: Ensure session/auth cookies work inside the cross-origin iframe
+    // FIX 3: Ensure session/auth cookies work inside the cross-origin iframe
     for (const c of entry.setCookie ?? []) {
       let cookie = c;
       // Force SameSite=None and Secure for iframe compatibility
@@ -130,7 +138,7 @@ const proxy = defineMiddleware(async ({ request }, next) => {
       headers.append('set-cookie', cookie);
     }
 
-    // FIX 3: Break out of the iframe for external Auth/Payment redirects
+    // FIX 4: Break out of the iframe for external Auth/Payment redirects
     if ([301, 302, 303, 307, 308].includes(entry.status)) {
       const location = headers.get('location');
       if (location) {
@@ -145,25 +153,14 @@ const proxy = defineMiddleware(async ({ request }, next) => {
             
             // Only break out for actual top-level navigations (ignore API 'fetch' calls)
             if (dest === 'document' || dest === 'iframe' || accept.includes('text/html')) {
-              return new Response(
-                `<!DOCTYPE html>
-                <html>
-                  <head><title>Redirecting securely...</title></head>
-                  <body>
-                    <script>
-                      // Break out of the responsive tester to safely complete auth/payment
-                      window.top.location.href = ${JSON.stringify(locUrl.href)};
-                    </script>
-                    <noscript>
-                      <a href="${locUrl.href}" target="_top">Click here to continue to ${locUrl.hostname}</a>
-                    </noscript>
-                  </body>
-                </html>`,
-                {
-                  status: 200,
-                  headers: { 'content-type': 'text/html; charset=utf-8' }
-                }
-              );
+              // Compressed to a single line with safe stringification to prevent HTML injection errors
+              const safeUrl = JSON.stringify(locUrl.href).replace(/</g, '\\u003c');
+              const html = `<!DOCTYPE html><html><head><title>Redirecting securely...</title></head><body><script>window.top.location.href = ${safeUrl};</script><noscript><a href=${safeUrl} target="_top">Click to continue</a></noscript></body></html>`;
+              
+              return new Response(html, {
+                status: 200,
+                headers: { 'content-type': 'text/html; charset=utf-8' }
+              });
             }
           }
         } catch {
