@@ -669,7 +669,7 @@ const canUsePro = hasPro;
   const sidebar = $('sidebar');
   const backdrop = $('sidebar-backdrop');
 
-  // ---------- Tier limits ----------
+  // ---------- Tier limits & Promo ----------
   const root = document.querySelector<HTMLElement>('[data-max-screens]');
   const MAX_SCREENS = Number(root?.dataset.maxScreens) || Infinity;
   const SCREEN_TIER = root?.dataset.screenTier || 'guest';
@@ -691,60 +691,33 @@ const canUsePro = hasPro;
     });
   }
 
-  // ---------- Guest promo ----------
+  // Guest promo logic
   if (SCREEN_TIER === 'guest') {
     const promo = $('promo-cta');
     const plansModal = $('plans-modal');
     const plansPanel = $('plans-panel');
     const plansOverlay = $('plans-overlay');
 
-    const showPromo = () => {
-      promo.classList.replace('hidden', 'flex');
-      requestAnimationFrame(() => promo.classList.remove('translate-y-2', 'opacity-0'));
-    };
-    const hidePromo = () => {
-      promo.classList.add('translate-y-2', 'opacity-0');
-      setTimeout(() => promo.classList.replace('flex', 'hidden'), 300);
-    };
+    const showPromo = () => { promo.classList.replace('hidden', 'flex'); requestAnimationFrame(() => promo.classList.remove('translate-y-2', 'opacity-0')); };
+    const hidePromo = () => { promo.classList.add('translate-y-2', 'opacity-0'); setTimeout(() => promo.classList.replace('flex', 'hidden'), 300); };
 
     let plansOpen = false;
-    const openPlans = () => {
-      plansOpen = true;
-      hidePromo();
-      plansModal.classList.replace('hidden', 'flex');
-      requestAnimationFrame(() => {
-        plansOverlay.classList.remove('opacity-0');
-        plansPanel.classList.remove('scale-95', 'opacity-0');
-      });
-    };
-    const closePlans = () => {
-      plansOpen = false;
-      plansOverlay.classList.add('opacity-0');
-      plansPanel.classList.add('scale-95', 'opacity-0');
-      setTimeout(() => { plansModal.classList.replace('flex', 'hidden'); showPromo(); }, 200);
-    };
+    const openPlans = () => { plansOpen = true; hidePromo(); plansModal.classList.replace('hidden', 'flex'); requestAnimationFrame(() => { plansOverlay.classList.remove('opacity-0'); plansPanel.classList.remove('scale-95', 'opacity-0'); }); };
+    const closePlans = () => { plansOpen = false; plansOverlay.classList.add('opacity-0'); plansPanel.classList.add('scale-95', 'opacity-0'); setTimeout(() => { plansModal.classList.replace('flex', 'hidden'); showPromo(); }, 200); };
 
-    $('promo-open').addEventListener('click', openPlans);
-    $('promo-dismiss').addEventListener('click', hidePromo);
-    $('plans-close').addEventListener('click', closePlans);
-    $('plans-overlay').addEventListener('click', closePlans);
+    $('promo-open').addEventListener('click', openPlans); $('promo-dismiss').addEventListener('click', hidePromo);
+    $('plans-close').addEventListener('click', closePlans); $('plans-overlay').addEventListener('click', closePlans);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && plansOpen) closePlans(); });
 
     setTimeout(showPromo, 8000);
     setInterval(() => { if (!plansModal.classList.contains('flex')) showPromo(); }, 60000);
   }
 
-  // Workspace tier logic
+  // Workspaces logic
   const MAX_WORKSPACES = SCREEN_TIER === 'pro' ? Infinity : SCREEN_TIER === 'free' ? 2 : 0;
   function canSaveWorkspace(currentCount: number): boolean {
-    if (MAX_WORKSPACES === 0) {
-      toast.warning('Saving workspaces needs an account', { description: 'Sign up free to save up to 2 workspaces.', log: false });
-      return false;
-    }
-    if (currentCount >= MAX_WORKSPACES) {
-      toast.warning(`Free plan saves up to ${MAX_WORKSPACES} workspaces`, { description: 'Upgrade to Pro for unlimited workspaces.', log: false });
-      return false;
-    }
+    if (MAX_WORKSPACES === 0) { toast.warning('Saving workspaces needs an account', { description: 'Sign up free to save up to 2 workspaces.', log: false }); return false; }
+    if (currentCount >= MAX_WORKSPACES) { toast.warning(`Free plan saves up to ${MAX_WORKSPACES} workspaces`, { description: 'Upgrade to Pro for unlimited workspaces.', log: false }); return false; }
     return true;
   }
 
@@ -756,13 +729,9 @@ const canUsePro = hasPro;
   }
   const store = {
     save: () => safeStore.set('vp-state', JSON.stringify(snapshot())),
-    load: (): VPState | null => {
-      const raw = safeStore.get('vp-state');
-      try { return raw ? JSON.parse(raw) : null; } catch { return null; }
-    }
+    load: (): VPState | null => { try { const r = safeStore.get('vp-state'); return r ? JSON.parse(r) : null; } catch { return null; } }
   };
 
-  // Init state
   const trackCustomCount = (id: string) => { if (id.startsWith('custom-')) customCount = Math.max(customCount, Number(id.split('-')[1]) || 0); };
   const saved = store.load();
   if (saved) {
@@ -780,19 +749,12 @@ const canUsePro = hasPro;
       if (d.id.startsWith('custom-') && !customScreens.has(d.id)) customScreens.set(d.id, { ...d, rotated: false });
     });
   } else if (!saved) {
-    $$<HTMLButtonElement>('.device-row[data-on="true"]').forEach((row) => {
-      active.set(row.dataset.id!, {
-        id: row.dataset.id!, name: row.dataset.name!, w: Number(row.dataset.w), h: Number(row.dataset.h),
-        type: row.dataset.type!, rotated: false,
-      });
-    });
+    $$<HTMLButtonElement>('.device-row[data-on="true"]').forEach((row) => { active.set(row.dataset.id!, { id: row.dataset.id!, name: row.dataset.name!, w: Number(row.dataset.w), h: Number(row.dataset.h), type: row.dataset.type!, rotated: false }); });
   }
 
   if (active.size > MAX_SCREENS) [...active.keys()].slice(MAX_SCREENS).forEach(id => active.delete(id));
   
-  function syncDeviceRows() {
-    $$<HTMLElement>('.device-row', sidebar).forEach(row => { row.dataset.on = String(active.has(row.dataset.id!)); });
-  }
+  function syncDeviceRows() { $$<HTMLElement>('.device-row', sidebar).forEach(row => { row.dataset.on = String(active.has(row.dataset.id!)); }); }
   syncDeviceRows();
 
   // ---------- Helpers ----------
@@ -802,23 +764,17 @@ const canUsePro = hasPro;
     if (!v) return null;
     if (/^https?:\/\//i.test(v)) { try { return new URL(v).href; } catch { return searchUrl(v); } }
     if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return searchUrl(v);
-    const host = v.split(/[/?#]/)[0];
     const looksLikeHost = !/\s/.test(v) && (/\.[a-z]{2,}([:/?#]|$)/i.test(v) || /^localhost([:/?#]|$)/i.test(v) || /^\d{1,3}(\.\d{1,3}){3}([:/?#]|$)/.test(v));
     if (!looksLikeHost) return searchUrl(v);
-    const isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)([:/?#]|$)/i.test(host);
+    const isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)([:/?#]|$)/i.test(v.split(/[/?#]/)[0]);
     try { return new URL((isLocal ? 'http://' : 'https://') + v).href; } catch { return searchUrl(v); }
   }
 
   const scaleFor = (w: number) => zoom === 'fit' ? (w <= 500 ? 0.72 : w <= 1100 ? 0.48 : 0.36) : zoom;
   const escapeHtml = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
-
   function titleCase(s: string) { return s.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase()); }
-  function websiteName(u: string) {
-    try { const p = new URL(u).hostname.replace(/^www\./i, '').split('.'); return titleCase(p.length > 2 ? p[p.length - 2] : p[0] || u); } catch { return 'Website'; }
-  }
-  function pageNameFromUrl(u: string) {
-    try { const l = new URL(u).pathname.split('/').filter(Boolean).pop(); return l ? titleCase(decodeURIComponent(l)) : 'Home'; } catch { return 'Page'; }
-  }
+  function websiteName(u: string) { try { const p = new URL(u).hostname.replace(/^www\./i, '').split('.'); return titleCase(p.length > 2 ? p[p.length - 2] : p[0] || u); } catch { return 'Website'; } }
+  function pageNameFromUrl(u: string) { try { const l = new URL(u).pathname.split('/').filter(Boolean).pop(); return l ? titleCase(decodeURIComponent(l)) : 'Home'; } catch { return 'Page'; } }
   function formatCaptureTitle() {
     const url = latestPageMeta?.url || currentUrl;
     const site = websiteName(url), page = latestPageMeta?.pageName || pageNameFromUrl(url);
@@ -835,11 +791,18 @@ const canUsePro = hasPro;
 
   function visitedUrlFromFrame(iframe: HTMLIFrameElement) {
     try {
-      const loc = iframe.contentWindow?.location; if (!loc) return currentUrl;
-      const params = new URLSearchParams(loc.search), origin = params.get('__vphost'); if (!origin) return currentUrl;
-      params.delete('__vphost'); params.delete('__cb');
-      const qs = params.toString();
-      return `${origin}${loc.pathname}${qs ? `?${qs}` : ''}${loc.hash}`;
+      const loc = iframe.contentWindow?.location; 
+      if (!loc || loc.href === 'about:blank') return currentUrl;
+      // If it navigated inside our proxy domain, construct real URL
+      if (loc.origin === window.location.origin) {
+        const params = new URLSearchParams(loc.search);
+        const origin = params.get('__vphost'); 
+        if (!origin) return loc.href;
+        params.delete('__vphost'); params.delete('__cb');
+        const qs = params.toString();
+        return `${origin}${loc.pathname}${qs ? `?${qs}` : ''}${loc.hash}`;
+      }
+      return loc.href;
     } catch { return currentUrl; }
   }
 
@@ -852,6 +815,212 @@ const canUsePro = hasPro;
       pageName = parts.find(p => p.toLowerCase() !== site.toLowerCase()) || t || pageName;
     } catch {}
     latestPageMeta = { url, title: `${site} - ${pageName}`, pageName, updatedAt: Date.now() };
+  }
+
+  // ---------- Sync Hub (Message Listener) ----------
+  // Listens for navigation events emitted by any iframe and updates the entire viewport
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'VP_NAVIGATE') {
+      const { url: newUrl, sourceFrameId, isHardNav } = e.data;
+      if (!newUrl || newUrl === currentUrl) return;
+
+      currentUrl = newUrl;
+      input.value = newUrl;
+      latestPageMeta = null;
+      clearBtn.style.display = 'block';
+      store.save();
+
+      if (isHardNav) {
+        // Hard navigation (like external auth link) - re-proxy everything safely
+        renderAll();
+      } else {
+        // SPA navigation - update other panes without destroying the source iframe's state
+        const allPanes = $$<HTMLElement>('[data-frame-id]', frames);
+        allPanes.forEach(pane => {
+          if (pane.dataset.frameId === sourceFrameId) {
+            const chromeUrl = pane.querySelector('[data-role="chrome-url"]');
+            if (chromeUrl) chromeUrl.textContent = newUrl.replace(/^https?:\/\//, '');
+          } else {
+            const loader = pane.querySelector<HTMLElement>('[data-role="loader"]');
+            const iframe = pane.querySelector('iframe');
+            if (loader && iframe) {
+              loader.style.display = 'grid';
+              iframe.src = toProxy(newUrl);
+            }
+          }
+        });
+      }
+    }
+  });
+
+  // ---------- Robust Iframe URL Spoofing & Routing Fix ----------
+  function setupIframeLinkSpoofing(iframe: HTMLIFrameElement, frameId: string) {
+    try {
+      const doc = iframe.contentDocument;
+      const win = iframe.contentWindow;
+      if (!doc || !win) return;
+
+      const frameUrl = new URL(win.location.href);
+      const upstreamOrigin = frameUrl.searchParams.get('__vphost');
+      if (!upstreamOrigin) return;
+
+      const toRealUrl = (href: string) => {
+        try {
+          const u = new URL(href, win.location.href);
+          if (u.origin === window.location.origin) {
+            const host = u.searchParams.get('__vphost') || upstreamOrigin;
+            u.searchParams.delete('__vphost');
+            u.searchParams.delete('__cb');
+            return new URL(u.pathname + u.search + u.hash, host).href;
+          }
+          return href;
+        } catch { return href; }
+      };
+
+      const toProxyUrl = (href: string) => {
+        try {
+          const u = new URL(href, win.location.href);
+          if (u.origin === window.location.origin) {
+            if (!u.searchParams.get('__vphost')) u.searchParams.set('__vphost', upstreamOrigin);
+            return u.href;
+          }
+          // Force ANY cross-origin link through the proxy and update the upstream host context
+          const p = new URL(u.pathname + u.search + u.hash, window.location.origin);
+          p.searchParams.set('__vphost', u.origin);
+          return p.href;
+        } catch { return href; }
+      };
+
+      const notifyParent = (url: string, isHardNav: boolean) => {
+        try { win.parent.postMessage({ type: 'VP_NAVIGATE', url, sourceFrameId: frameId, isHardNav }, '*'); } catch {}
+      };
+
+      // 1. PATCH HISTORY API (Intercept SPA internal routing)
+      try {
+        const origPush = win.history.pushState;
+        win.history.pushState = function(state, unused, url) {
+          let realTarget = '';
+          if (url) {
+            try {
+              realTarget = toRealUrl(new URL(url, win.location.href).href);
+              url = toProxyUrl(url as string);
+            } catch {}
+          }
+          const res = origPush.call(this, state, unused, url);
+          if (realTarget) notifyParent(realTarget, false);
+          return res;
+        };
+
+        const origReplace = win.history.replaceState;
+        win.history.replaceState = function(state, unused, url) {
+          let realTarget = '';
+          if (url) {
+            try {
+              realTarget = toRealUrl(new URL(url, win.location.href).href);
+              url = toProxyUrl(url as string);
+            } catch {}
+          }
+          const res = origReplace.call(this, state, unused, url);
+          if (realTarget) notifyParent(realTarget, false);
+          return res;
+        };
+      } catch {}
+
+      // 2. PATCH FETCH & XHR (Keep API requests routed through proxy if needed)
+      try {
+        const origFetch = win.fetch;
+        win.fetch = function(input, init) {
+          try {
+            let urlStr = typeof input === 'string' ? input : input instanceof Request ? input.url : input instanceof URL ? input.href : '';
+            if (urlStr) {
+              const proxied = toProxyUrl(urlStr);
+              if (typeof input === 'string') input = proxied;
+              else if (input instanceof URL) input = new URL(proxied);
+              else if (input instanceof Request) input = new Request(proxied, input);
+            }
+          } catch {}
+          return origFetch.call(this, input, init);
+        };
+
+        const origOpen = win.XMLHttpRequest.prototype.open;
+        win.XMLHttpRequest.prototype.open = function(method, url, ...args) {
+          try { url = toProxyUrl(url as string); } catch {}
+          return origOpen.call(this, method, url, ...args);
+        };
+      } catch {}
+
+      // 3. HOVER SPOOFING (Make status bar show the real target URL on hover)
+      const hover = (e: Event) => {
+        const a = (e.target as HTMLElement).closest('a');
+        if (!a) return;
+        const raw = a.getAttribute('href');
+        if (!raw || raw.match(/^(javascript:|mailto:|tel:|#)/i)) return;
+        
+        if (!a.dataset.vpProxy) {
+          a.dataset.vpProxy = toProxyUrl(a.href);
+          a.href = a.dataset.vpProxy;
+        }
+        
+        a.dataset.vpSpoof = "1";
+        a.href = toRealUrl(a.dataset.vpProxy);
+      };
+
+      const unhover = (e: Event) => {
+        const a = (e.target as HTMLElement).closest('a');
+        if (a && a.dataset.vpSpoof && a.dataset.vpProxy) {
+          a.href = a.dataset.vpProxy;
+          delete a.dataset.vpSpoof;
+        }
+      };
+
+      doc.addEventListener('mouseover', hover, true);
+      doc.addEventListener('focus', hover, true);
+      doc.addEventListener('mouseout', unhover, true);
+      doc.addEventListener('blur', unhover, true);
+      doc.addEventListener('mousedown', unhover, true);
+      doc.addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') unhover(e); }, true);
+
+      // 4. HARD NAV INTERCEPTOR 
+      // Prevents IFRAME "Refused to Connect" errors by forcing clicks into proxy
+      doc.addEventListener('click', (e) => {
+        if (e.defaultPrevented) return; // SPAs will prevent default and use history.pushState
+        
+        const a = (e.target as HTMLElement).closest('a');
+        if (!a || !a.href) return;
+        
+        if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+        
+        const raw = a.getAttribute('href');
+        if (!raw || raw.startsWith('#') || raw.match(/^(javascript:|mailto:|tel:)/i)) return;
+        if (a.target === '_blank') return; 
+
+        e.preventDefault(); // Stop natural iframe navigation which triggers X-Frame-Options
+        
+        let targetUrl = a.href;
+        if (a.dataset.vpProxy && a.dataset.vpSpoof) {
+            targetUrl = a.href; 
+        } else {
+            targetUrl = toRealUrl(a.href);
+        }
+
+        notifyParent(targetUrl, true);
+      }, false);
+
+      // 5. FORM SUBMISSIONS
+      doc.addEventListener('submit', (e) => {
+        const f = e.target as HTMLFormElement;
+        if (f && (!f.method || f.method.toLowerCase() === 'get')) {
+          if (!f.querySelector('input[name="__vphost"]')) {
+            const input = doc.createElement('input');
+            input.type = 'hidden';
+            input.name = '__vphost';
+            input.value = upstreamOrigin;
+            f.appendChild(input);
+          }
+        }
+      }, true);
+
+    } catch (err) {}
   }
 
   // ---------- Frame Management ----------
@@ -879,9 +1048,7 @@ const canUsePro = hasPro;
     el.innerHTML = `
       <div class="mb-2 flex items-center justify-between gap-2 px-0.5" style="width:${sw + (!framesOn || d.type === 'desktop' ? 2 : 20)}px">
         <div class="flex min-w-0 items-center gap-1.5">
-          <button type="button" data-action="drag" class="tip drag-handle grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Drag" data-tip="Drag to reorder" data-tip-align="start">
-            <svg class="size-3.5" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
-          </button>
+          <button type="button" data-action="drag" class="tip drag-handle grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Drag" data-tip="Drag to reorder" data-tip-align="start"><svg class="size-3.5" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></button>
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold">${name}</p>
             <p class="text-xs tabular-nums text-muted-foreground">${w} × ${h} · ${Math.round(s * 100)}%</p>
@@ -898,7 +1065,35 @@ const canUsePro = hasPro;
 
     const iframe = el.querySelector('iframe')!;
     const loader = el.querySelector<HTMLElement>('[data-role="loader"]')!;
-    iframe.addEventListener('load', () => { loader.style.display = 'none'; updatePageMetaFromFrame(iframe); });
+    
+    iframe.addEventListener('load', () => { 
+      loader.style.display = 'none'; 
+      updatePageMetaFromFrame(iframe);
+
+      // Catch-all sync: If iframe navigated natively (like form submit), read its true URL and sync UI
+      const realUrl = visitedUrlFromFrame(iframe);
+      if (realUrl && realUrl !== currentUrl && realUrl !== 'about:blank') {
+         currentUrl = realUrl;
+         input.value = realUrl;
+         clearBtn.style.display = 'block';
+         store.save();
+         
+         const chromeUrl = el.querySelector('[data-role="chrome-url"]');
+         if (chromeUrl) chromeUrl.textContent = realUrl.replace(/^https?:\/\//, '');
+
+         // Sync all other iframes
+         const allPanes = $$<HTMLElement>('[data-frame-id]', frames);
+         allPanes.forEach(p => {
+           if (p.dataset.frameId !== d.id) {
+             const l = p.querySelector<HTMLElement>('[data-role="loader"]');
+             const f = p.querySelector('iframe');
+             if (l && f) { l.style.display = 'grid'; f.src = toProxy(realUrl); }
+           }
+         });
+      }
+
+      setupIframeLinkSpoofing(iframe, d.id);
+    });
     
     loader.style.display = 'grid';
     iframe.src = toProxy(currentUrl);
@@ -1057,13 +1252,8 @@ const canUsePro = hasPro;
   sidebar.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
     const delBtn = target.closest('.custom-del');
-    if (delBtn) {
-      const id = delBtn.closest('.device-row')?.dataset.id;
-      if (id) promptDeleteScreen(id);
-      return;
-    }
-    const row = target.closest('.device-row') as HTMLElement | null;
-    if (row) toggleRow(row);
+    if (delBtn) { const id = delBtn.closest('.device-row')?.dataset.id; if (id) promptDeleteScreen(id); return; }
+    const row = target.closest('.device-row') as HTMLElement | null; if (row) toggleRow(row);
   });
   sidebar.addEventListener('keydown', (e) => {
     const row = (e.target as HTMLElement).closest('.device-row') as HTMLElement | null;
@@ -1071,8 +1261,7 @@ const canUsePro = hasPro;
   });
 
   // ---------- Custom Screens ----------
-  const customList = $('custom-list');
-  const customGroup = $('custom-group');
+  const customList = $('custom-list'), customGroup = $('custom-group');
   const typeForWidth = (w: number) => (w <= 500 ? 'phone' : w <= 1100 ? 'tablet' : 'desktop');
 
   function syncCustomGroup() { customGroup.style.display = customScreens.size ? 'block' : 'none'; }
@@ -1080,14 +1269,12 @@ const canUsePro = hasPro;
     const li = document.createElement('li');
     li.dataset.customId = d.id;
     li.innerHTML = `<div class="device-row group flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-muted" role="button" tabindex="0" data-id="${d.id}" data-name="${escapeHtml(d.name)}" data-w="${d.w}" data-h="${d.h}" data-type="${d.type}" data-on="${String(active.has(d.id))}"><span class="grid size-4 shrink-0 place-items-center rounded border border-border transition-colors group-data-[on=true]:border-primary group-data-[on=true]:bg-primary"><svg class="size-3 text-primary-foreground opacity-0 transition-opacity group-data-[on=true]:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="min-w-0 flex-1 truncate">${escapeHtml(d.name)}</span><span class="shrink-0 text-xs tabular-nums text-muted-foreground">${d.w}×${d.h}</span><button type="button" class="custom-del grid size-5 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100" aria-label="Delete" title="Delete screen"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></div>`;
-    customList.appendChild(li);
-    syncCustomGroup();
+    customList.appendChild(li); syncCustomGroup();
   }
   function deleteCustomScreen(id: string) {
     const name = customScreens.get(id)?.name ?? 'Screen';
     if (active.has(id)) removeDevice(id);
-    customScreens.delete(id);
-    customList.querySelector(`li[data-custom-id="${id}"]`)?.remove();
+    customScreens.delete(id); customList.querySelector(`li[data-custom-id="${id}"]`)?.remove();
     syncCustomGroup(); store.save(); toast.success('Screen deleted', { description: name, log: 'Screen deleted' });
   }
   function addCustomScreen(name: string, w: number, h: number) {
@@ -1141,8 +1328,7 @@ const canUsePro = hasPro;
 
   $('clear-cache').addEventListener('click', () => {
     if (!currentUrl) return toast.warning('Nothing to reload', { description: 'Load a URL first.', log: false });
-    const token = Date.now();
-    const panes = $$<HTMLElement>('[data-frame-id]', frames);
+    const token = Date.now(), panes = $$<HTMLElement>('[data-frame-id]', frames);
     panes.forEach(pane => {
       const loader = pane.querySelector<HTMLElement>('[data-role="loader"]');
       const iframe = pane.querySelector('iframe');
@@ -1225,7 +1411,6 @@ const canUsePro = hasPro;
     if (active.size > MAX_SCREENS) [...active.keys()].slice(MAX_SCREENS).forEach(id => active.delete(id));
 
     customScreens.clear(); customList.innerHTML = '';
-    const frag = document.createDocumentFragment();
     (s.customScreens || []).forEach(d => { customScreens.set(d.id, d); trackCustomCount(d.id); insertCustomRow(d); });
     syncCustomGroup(); syncDeviceRows(); applyLayout(); syncFrameToggle();
     zoomLabel.textContent = zoom === 'fit' ? 'Fit' : `${Math.round((zoom as number) * 100)}%`;
@@ -1378,3 +1563,4 @@ const canUsePro = hasPro;
     const paramUrl = sp.get('url'); if (paramUrl) { input.value = paramUrl; form.requestSubmit(); }
   }
 </script>
+```

@@ -136,57 +136,17 @@ const injectedScrollbarStyle = `<style data-viewport-scrollbar>
   }
 </style>`;
 
-// Neutralise service-worker registration inside the framed page. A worker the
-// upstream tries to install would be scoped to OUR proxy origin — it could
-// intercept and cache requests for the real app, a security/correctness hazard —
-// and its script (a JS string literal, which we don't rewrite) 404s and spams the
-// console. Stub register() to a never-settling promise so the site's SW code
-// no-ops and its "registration failed" .catch never fires. Runs first in <head>,
-// before the app bundle.
+// Neutralise service-worker registration inside the framed page.
 const injectedHeadScript = `<script data-viewport-proxy-sw>(function(){try{var s=navigator&&navigator.serviceWorker;if(s){s.register=function(){return new Promise(function(){})};if(s.getRegistration)s.getRegistration=function(){return Promise.resolve()};if(s.getRegistrations)s.getRegistrations=function(){return Promise.resolve([])}}}catch(e){}})();</script>`;
 
-// The __vphost marker rides in the document URL's query string; the proxy reads
-// it (directly, or off the Referer) to know which upstream a same-origin request
-// belongs to. SPA routers rewrite the URL via history.pushState/replaceState on
-// load and navigation — which would strip the marker, after which every resource
-// the app injects at runtime (images, fetches) sends a markerless Referer and
-// 404s. Patch both methods, before the app bundle runs, to re-stamp the marker
-// onto any same-origin URL that's missing it. Keeps location.search carrying the
-// marker so the Referer fallback always resolves, for whatever origin (http/https,
-// www/apex) the document was loaded with. No URL arg → location unchanged → skip.
-const injectedHistoryScript = `<script data-viewport-proxy-hist>(function(){try{
-var MARK=${JSON.stringify(VPHOST)};
-function keep(url){try{var want=new URLSearchParams(location.search).get(MARK);if(!want)return url;
-if(url==null)return url;var u=new URL(url,location.href);if(u.origin!==location.origin)return url;
-if(!u.searchParams.get(MARK))u.searchParams.set(MARK,want);return u.pathname+u.search+u.hash;}catch(e){return url;}}
-var p=history.pushState,r=history.replaceState;
-history.pushState=function(s,t,u){return p.call(this,s,t,arguments.length>2?keep(u):u);};
-history.replaceState=function(s,t,u){return r.call(this,s,t,arguments.length>2?keep(u):u);};
-}catch(e){}})();</script>`;
+// Patch history to retain the proxy parameters during SPA transitions.
+const injectedHistoryScript = `<script data-viewport-proxy-hist>(function(){try{var m=${JSON.stringify(VPHOST)};function k(u){try{var w=new URLSearchParams(location.search).get(m);if(!w)return u;if(u==null)return u;var a=new URL(u,location.href);if(a.origin!==location.origin)return u;if(!a.searchParams.get(m))a.searchParams.set(m,w);return a.pathname+a.search+a.hash}catch(e){return u}}var p=history.pushState,r=history.replaceState;history.pushState=function(s,t,u){return p.call(this,s,t,arguments.length>2?k(u):u)};history.replaceState=function(s,t,u){return r.call(this,s,t,arguments.length>2?k(u):u)}}catch(e){}})();</script>`;
 
-// Same-origin links a proxied SPA builds at runtime never pass through the HTML
-// rewriter above, so they point at our origin WITHOUT the __vphost marker: the
-// hovered URL looks wrong and opening one in a new tab (no Referer to fall back
-// on) 404s. This observer stamps the marker onto same-origin <a href> and
-// <form action> as the app renders them, so navigation stays proxied everywhere —
-// clicks, new tabs, referer-less requests — not just via the Referer fallback.
-// The marker is a query param, so it never changes location.pathname (which SPA
-// routers branch on). Idempotent: an already-marked URL is left alone, so the
-// setAttribute can't loop against its own mutation record.
+// Intercepts link interactions to temporarily display the real, clean external URL 
+// in the browser's status bar on hover, but perfectly restores the proxy URL 
+// immediately before the click/navigation fires.
 function injectedNavScript(origin: string): string {
-  return `<script data-viewport-proxy-nav>(function(){try{
-var ORIGIN=${JSON.stringify(origin)},MARK=${JSON.stringify(VPHOST)},SELF=location.origin;
-function fix(el,attr){try{if(!el||!el.getAttribute)return;var v=el.getAttribute(attr);if(!v)return;
-var a=new URL(v,location.href);if(a.origin!==SELF&&a.origin!==ORIGIN)return;if(a.searchParams.get(MARK))return;
-a.searchParams.set(MARK,ORIGIN);el.setAttribute(attr,a.pathname+a.search+a.hash);}catch(e){}}
-function scan(n){if(!n||n.nodeType!==1)return;if(n.tagName==='A')fix(n,'href');else if(n.tagName==='FORM')fix(n,'action');
-if(n.querySelectorAll){var as=n.querySelectorAll('a[href]'),i;for(i=0;i<as.length;i++)fix(as[i],'href');
-var fo=n.querySelectorAll('form[action]');for(i=0;i<fo.length;i++)fix(fo[i],'action');}}
-function run(){scan(document.documentElement);new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var m=ms[i];
-if(m.type==='attributes')fix(m.target,m.attributeName);for(var k=0;k<m.addedNodes.length;k++)scan(m.addedNodes[k]);}})
-.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['href','action']});}
-if(document.documentElement)run();else document.addEventListener('DOMContentLoaded',run);
-}catch(e){}})();</script>`;
+  return `<script data-viewport-proxy-nav>(function(){try{var o=${JSON.stringify(origin)},m=${JSON.stringify(VPHOST)},s=location.origin;function p(u){try{if(!u)return u;var a=new URL(u,location.href);if(a.origin!==s&&a.origin!==o)return u;if(!a.searchParams.get(m))a.searchParams.set(m,o);return a.pathname+a.search+a.hash}catch(e){return u}}function r(u){try{var a=new URL(u,location.href),h=a.searchParams.get(m)||o;a.searchParams.delete(m);a.searchParams.delete('__cb');return new URL(a.pathname+a.search+a.hash,h).href}catch(e){return u}}function h(e){var a=e.target.closest('a');if(!a)return;var v=a.getAttribute('href');if(!v||v.match(/^(javascript|mailto|tel|#)/i))return;a.dataset.h='1';var x=p(v);a.dataset.v=x;a.href=r(x)}function u(e){var a=e.target.closest('a');if(a&&a.dataset.v&&!a.contains(e.relatedTarget)){a.setAttribute('href',a.dataset.v);delete a.dataset.h}}function d(e){var a=e.target.closest('a');if(!a)return;if(a.dataset.v){a.setAttribute('href',a.dataset.v);delete a.dataset.h}else{var v=a.getAttribute('href');if(v&&!v.match(/^(javascript|mailto|tel|#)/i))a.setAttribute('href',p(v))}}document.addEventListener('click',d,{capture:!0});document.addEventListener('mousedown',d,{capture:!0});document.addEventListener('mouseover',h,{capture:!0});document.addEventListener('focus',h,{capture:!0});document.addEventListener('mouseout',u,{capture:!0});document.addEventListener('blur',u,{capture:!0});function c(n){if(!n||n.nodeType!==1)return;if(n.tagName==='A'&&!n.dataset.h){var v=n.getAttribute('href');if(v&&!v.match(/^(javascript|mailto|tel|#)/i))n.setAttribute('href',p(v))}else if(n.tagName==='FORM'){var a=n.getAttribute('action');if(a)n.setAttribute('action',p(a))}if(n.querySelectorAll){var as=n.querySelectorAll('a[href]:not([data-h])'),i;for(i=0;i<as.length;i++)if(!as[i].getAttribute('href').match(/^(javascript|mailto|tel|#)/i))as[i].setAttribute('href',p(as[i].getAttribute('href')));var fs=n.querySelectorAll('form[action]');for(i=0;i<fs.length;i++)fs[i].setAttribute('action',p(fs[i].getAttribute('action')))}}function y(){c(document.documentElement);new MutationObserver(function(x){for(var i=0;i<x.length;i++){var e=x[i];if(e.type==='attributes'){var t=e.target;if(e.attributeName==='href'&&t.tagName==='A'&&!t.dataset.h&&!t.getAttribute('href').match(/^(javascript|mailto|tel|#)/i))t.setAttribute('href',p(t.getAttribute('href')));else if(e.attributeName==='action'&&t.tagName==='FORM')t.setAttribute('action',p(t.getAttribute('action')))}for(var k=0;k<e.addedNodes.length;k++)c(e.addedNodes[k])}}).observe(document.documentElement,{childList:!0,subtree:!0,attributes:!0,attributeFilter:['href','action']})}if(document.documentElement)y();else document.addEventListener('DOMContentLoaded',y)}catch(e){}})();</script>`;
 }
 
 /** Map a same-origin absolute URL to a path-mirroring proxy URL. */
@@ -244,6 +204,14 @@ function rewriteHtml(html: string, base: string): string {
   html = html.replace(/\s+integrity\s*=\s*("|')[^"']*\1/gi, '');
   
   html = html.replace(/<html\b(?![^>]*\bdata-viewport-proxy-scrollbars\b)([^>]*)>/i, '<html data-viewport-proxy-scrollbars$1>');
+
+  // Secure JS redirects (<meta http-equiv="refresh">)
+  html = html.replace(/<meta[^>]+http-equiv=["']?refresh["']?[^>]*>/gi, (m) => {
+    return m.replace(/url=([^"'>\s]+)/i, (m2, url) => {
+      const mapped = mapRef(url, base, baseOrigin);
+      return mapped ? `url=${mapped}` : m2;
+    });
+  });
 
   // Force a full-URL referer so JS-created subresources carry __vphost.
   html = html.replace(/<meta[^>]+name=["']?referrer["']?[^>]*>/gi, '');
