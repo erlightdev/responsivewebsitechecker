@@ -9,5 +9,9 @@ export default defineConfig({
 	adapter: vercel(),
 	vite: {
 		plugins: [tailwindcss()],
+		// Allow any host (tunnels, LAN IPs, etc.) to reach the dev server.
+		server: {
+			allowedHosts: true,
+		},
 	},
 });

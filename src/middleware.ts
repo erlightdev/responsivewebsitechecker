@@ -108,16 +108,80 @@ const proxy = defineMiddleware(async ({ request }, next) => {
       body,
       contentType: request.headers.get('content-type'),
     });
+    
     const headers = new Headers(entry.headers);
-    for (const c of entry.setCookie ?? []) headers.append('set-cookie', c);
+
+    // FIX 1: Remove clickjacking headers so auth screens can be rendered inside the iframe initially
+    headers.delete('x-frame-options');
+    headers.delete('content-security-policy');
+
+    // FIX 2: Ensure session/auth cookies work inside the cross-origin iframe
+    for (const c of entry.setCookie ?? []) {
+      let cookie = c;
+      // Force SameSite=None and Secure for iframe compatibility
+      if (/SameSite=(Lax|Strict)/i.test(cookie)) {
+        cookie = cookie.replace(/SameSite=(Lax|Strict)/ig, 'SameSite=None');
+      } else if (!/SameSite=/i.test(cookie)) {
+        cookie += '; SameSite=None';
+      }
+      if (!/Secure/i.test(cookie)) {
+        cookie += '; Secure';
+      }
+      headers.append('set-cookie', cookie);
+    }
+
+    // FIX 3: Break out of the iframe for external Auth/Payment redirects
+    if ([301, 302, 303, 307, 308].includes(entry.status)) {
+      const location = headers.get('location');
+      if (location) {
+        try {
+          const locUrl = new URL(location, target);
+          const targetUrl = new URL(target);
+          
+          // Check if redirecting to a third-party service (e.g., Stripe, PayPal, Auth0)
+          if (locUrl.hostname !== targetUrl.hostname && !locUrl.hostname.endsWith('.' + targetUrl.hostname)) {
+            const dest = request.headers.get('sec-fetch-dest');
+            const accept = request.headers.get('accept') || '';
+            
+            // Only break out for actual top-level navigations (ignore API 'fetch' calls)
+            if (dest === 'document' || dest === 'iframe' || accept.includes('text/html')) {
+              return new Response(
+                `<!DOCTYPE html>
+                <html>
+                  <head><title>Redirecting securely...</title></head>
+                  <body>
+                    <script>
+                      // Break out of the responsive tester to safely complete auth/payment
+                      window.top.location.href = ${JSON.stringify(locUrl.href)};
+                    </script>
+                    <noscript>
+                      <a href="${locUrl.href}" target="_top">Click here to continue to ${locUrl.hostname}</a>
+                    </noscript>
+                  </body>
+                </html>`,
+                {
+                  status: 200,
+                  headers: { 'content-type': 'text/html; charset=utf-8' }
+                }
+              );
+            }
+          }
+        } catch {
+          // Malformed Location URL, ignore and fall through to standard proxying
+        }
+      }
+    }
+
     // On a freshly-loaded preview document, remember its origin so the page's
     // referer-less subresources can resolve to it (see the cookie fallback above).
     if (own && (entry.headers['content-type'] ?? '').includes('text/html')) {
       headers.append(
         'set-cookie',
-        `${PROXY_ORIGIN_COOKIE}=${encodeURIComponent(origin)}; Path=/; Max-Age=86400; SameSite=Lax; HttpOnly`
+        // Also updated to SameSite=None; Secure so the fallback cookie reliably works in iframes
+        `${PROXY_ORIGIN_COOKIE}=${encodeURIComponent(origin)}; Path=/; Max-Age=86400; SameSite=None; Secure; HttpOnly`
       );
     }
+    
     return new Response(entry.body as BodyInit, { status: entry.status, headers });
   } catch (e) {
     // Only the document/subresource we explicitly proxied gets an error page;
