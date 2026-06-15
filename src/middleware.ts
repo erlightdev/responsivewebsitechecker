@@ -54,6 +54,20 @@ const proxy = defineMiddleware(async ({ request }, next) => {
   // They only exist on Cloudflare's edge — swallow them silently.
   if (url.pathname.startsWith('/cdn-cgi/')) return new Response(null, { status: 204 });
 
+  // A proxied page may call navigator.serviceWorker.register('/service-worker.js').
+  // The browser resolves that against OUR origin, so it 404s here (the app ships no
+  // SW of its own). We can't always resolve the upstream origin for this request
+  // (the script URL carries no __vphost marker, the referer's query may be stripped,
+  // and the fallback cookie may not be set yet), so handle it BEFORE origin
+  // resolution: any serviceworker-destined request to us gets a harmless no-op SW.
+  // This also stops a third-party SW from ever hijacking the app domain.
+  if ((request.headers.get('sec-fetch-dest') ?? '') === 'serviceworker') {
+    return new Response(
+      `self.addEventListener('install',(e)=>self.skipWaiting());\nself.addEventListener('activate',(e)=>self.clients.claim());`,
+      { status: 200, headers: { 'content-type': 'application/javascript; charset=utf-8' } }
+    );
+  }
+
   const own = url.searchParams.get(VPHOST);
 
   let originRaw = own;
@@ -89,19 +103,7 @@ const proxy = defineMiddleware(async ({ request }, next) => {
     return next();
   }
 
-  // FIX: Prevent Third-Party Service Workers from hijacking your app domain!
-  // If we proxy a remote SW, it will take over app.vercel.app and break your app.
-  // Instead, we return an empty dummy SW so the target site doesn't throw a 404 error.
-  const reqDest = request.headers.get('sec-fetch-dest') ?? '';
-  if (reqDest === 'serviceworker') {
-    return new Response(
-      `self.addEventListener('install', (e) => self.skipWaiting());\nself.addEventListener('activate', (e) => self.clients.claim());`,
-      { 
-        status: 200, 
-        headers: { 'content-type': 'application/javascript; charset=utf-8' } 
-      }
-    );
-  }
+  // (Service-worker requests are intercepted earlier, before origin resolution.)
 
   const params = new URLSearchParams(url.search);
   params.delete(VPHOST);

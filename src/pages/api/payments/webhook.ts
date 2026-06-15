@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
         'webhook-signature': request.headers.get('webhook-signature') ?? '',
         'webhook-timestamp': request.headers.get('webhook-timestamp') ?? '',
       },
-    }) as typeof event;
+    }) as unknown as typeof event;
   } catch (err) {
     console.warn('[payments] webhook signature verification failed:', err);
     return new Response('invalid signature', { status: 401 });

@@ -66,7 +66,10 @@ export const auth = betterAuth({
         await sendMail({
           to: email,
           subject: type === 'sign-in' ? 'Your Viewport sign-in code' : 'Verify your Viewport email',
-          html: otpEmail(otp, type === 'email-verification' ? 'verify' : type),
+          html: otpEmail(
+            otp,
+            type === 'sign-in' ? 'sign-in' : type === 'forget-password' ? 'reset' : 'verify'
+          ),
         });
       },
     }),
